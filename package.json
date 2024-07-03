@@ -1,0 +1,20 @@
+{
+  "name": "@vesuxyz/contracts-v1",
+  "version": "1.0.0",
+  "type": "module",
+  "repository": "https://github.com/vesuxyz/contracts-v1.git",
+  "author": "vesu-dev <174601598+vesu-dev@users.noreply.github.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^20.10.5",
+    "configurations": "https://github.com/vesuxyz/configurations.git#0d45649dac9cc0b5c0b42095f0b1ccc03760172f",
+    "dotenv": "^16.3.1",
+    "lodash-es": "^4.17.21",
+    "prettier": "^3.1.1",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "starknet": "v6.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

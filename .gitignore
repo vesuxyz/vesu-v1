@@ -1,0 +1,17 @@
+# snforge
+target/
+.snfoundry_cache/
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules
+yarn-error.log
+
+artifacts
+!deployments/artifacts
+dist
+deployment-*
