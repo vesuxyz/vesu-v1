@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "lib": ["es2023", "dom"],
+    "target": "es2022",
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "dist",
+    "strict": true
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["/**/*.ts"],
+  "exclude": ["node_modules", "cairo", "examples"]
+}

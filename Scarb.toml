@@ -1,0 +1,37 @@
+[package]
+name = "vesu"
+version = "0.1.0"
+cairo-version = "2.5.4"
+edition = "2023_01"
+
+[[target.starknet-contract]]
+casm = true
+sierra = true
+
+[dependencies]
+starknet = "2.5.4"
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.19.0" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "e7b6957" }
+
+[tool.fmt]
+max-line-length = 120
+sort-module-level-items = true
+
+[[tool.snforge.fork]]
+name = "Mainnet"
+url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_6"
+block_id.number = "523925"
+
+[scripts]
+format = "scarb fmt && yarn prettier --write ."
+checkFormat = "scarb fmt --check && yarn prettier --check ."
+startDevnet = "./scripts/startDevnet.sh"
+killDevnet = "lsof -t -i tcp:5050 | xargs kill"
+createPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPool.ts"
+createPosition = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPosition.ts"
+deploy = "scarb --profile release build && node --loader ts-node/esm ./scripts/deploy.ts"
+deployEnv = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployEnv.ts"
+deployProtocol = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployProtocol.ts"
+checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
+updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
+test = "snforge test"
