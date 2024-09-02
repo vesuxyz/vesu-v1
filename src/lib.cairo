@@ -11,8 +11,10 @@ mod v_token;
 
 mod extension {
     mod default_extension;
+    mod default_extension_v2;
     mod interface;
     mod components {
+        mod chainlink_oracle;
         mod fee_model;
         mod interest_rate_model;
         mod position_hooks;
@@ -22,6 +24,7 @@ mod extension {
 }
 
 mod vendor {
+    mod chainlink;
     mod erc20;
     mod erc20_component;
     mod pragma;
