@@ -77,6 +77,7 @@ trait IDefaultExtension<TContractState> {
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
+    fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn interest_rate_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
@@ -122,10 +123,12 @@ trait IDefaultExtension<TContractState> {
         v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
         pragma_oracle_params: PragmaOracleParams,
+        debt_cap: u256
     );
     fn set_asset_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
+    fn set_debt_cap(ref self: TContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256);
     fn set_interest_rate_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
@@ -159,6 +162,7 @@ trait IDefaultExtension<TContractState> {
     fn update_shutdown_status(
         ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
     ) -> ShutdownMode;
+    fn set_fee_config(ref self: TContractState, pool_id: felt252, fee_config: FeeConfig);
     fn claim_fees(ref self: TContractState, pool_id: felt252, collateral_asset: ContractAddress);
 }
 
@@ -362,6 +366,16 @@ mod DefaultExtension {
         /// * `fee_config` - fee configuration
         fn fee_config(self: @ContractState, pool_id: felt252) -> FeeConfig {
             self.fee_model.fee_configs.read(pool_id)
+        }
+
+        /// Returns the debt cap for a given asset in a pool
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `asset` - address of the asset
+        /// # Returns
+        /// * `debt_cap` - debt cap
+        fn debt_caps(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> u256 {
+            self.position_hooks.debt_caps.read((pool_id, asset))
         }
 
         /// Returns the interest rate configuration for a given pool and asset
@@ -601,13 +615,15 @@ mod DefaultExtension {
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
         /// * `pragma_oracle_params` - pragma oracle parameters
+        /// * `debt_cap` - debt cap
         fn add_asset(
             ref self: ContractState,
             pool_id: felt252,
             asset_params: AssetParams,
             v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
-            pragma_oracle_params: PragmaOracleParams
+            pragma_oracle_params: PragmaOracleParams,
+            debt_cap: u256
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
@@ -625,6 +641,9 @@ mod DefaultExtension {
                     }
                 );
 
+            // set the debt cap
+            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
+
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
 
@@ -633,6 +652,16 @@ mod DefaultExtension {
             self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
             ISingletonDispatcher { contract_address: self.singleton.read() }.set_asset_config(pool_id, asset_params);
+        }
+
+        /// Sets the debt cap for a given asset in a pool
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `asset` - address of the asset
+        /// * `debt_cap` - debt cap
+        fn set_debt_cap(ref self: ContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256) {
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
         }
 
         /// Sets a parameter for a given interest rate configuration for an asset in a pool
@@ -790,6 +819,15 @@ mod DefaultExtension {
             let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
             let mut context = singleton.context(pool_id, collateral_asset, debt_asset, Zeroable::zero());
             self.position_hooks.update_shutdown_status(ref context)
+        }
+
+        /// Sets the fee configuration for a specific pool.
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `fee_config` - new fee configuration parameters
+        fn set_fee_config(ref self: ContractState, pool_id: felt252, fee_config: FeeConfig) {
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+            self.fee_model.set_fee_config(pool_id, fee_config);
         }
 
         /// Claims the fees for a specific pair in a pool.

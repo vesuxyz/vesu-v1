@@ -8,7 +8,7 @@ mod TestDefaultExtension {
         singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig},
         extension::default_extension::{
             InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionDispatcherTrait, ShutdownParams,
-            FeeParams, VTokenParams, LiquidationConfig, ShutdownConfig
+            FeeParams, VTokenParams, LiquidationConfig, ShutdownConfig, FeeConfig
         },
         test::setup::{COLL_PRAGMA_KEY, deploy_asset_with_decimals, test_interest_rate_config}
     };
@@ -256,7 +256,7 @@ mod TestDefaultExtension {
 
         let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
 
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
     }
 
     #[test]
@@ -294,7 +294,7 @@ mod TestDefaultExtension {
         let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 
@@ -339,7 +339,7 @@ mod TestDefaultExtension {
         };
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 
@@ -381,7 +381,7 @@ mod TestDefaultExtension {
         let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
+        extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));
 
         let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
@@ -882,5 +882,62 @@ mod TestDefaultExtension {
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_interest_rate_parameter(config.pool_id, Zeroable::zero(), 'min_target_utilization', 5);
         stop_prank(CheatTarget::One(extension.contract_address));
+    }
+
+    #[test]
+    fn test_extension_set_fee_config() {
+        let Env { extension, config, users, .. } = setup_env(
+            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+        );
+
+        create_pool(extension, config, users.creator, Option::None);
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension.set_fee_config(config.pool_id, FeeConfig { fee_recipient: users.lender });
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let fee_config = extension.fee_config(config.pool_id);
+        assert(fee_config.fee_recipient == users.lender, 'Fee config not set');
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-owner")]
+    fn test_extension_set_fee_config_caller_not_owner() {
+        let Env { extension, config, users, .. } = setup_env(
+            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+        );
+
+        create_pool(extension, config, users.creator, Option::None);
+
+        extension.set_fee_config(config.pool_id, FeeConfig { fee_recipient: users.lender });
+    }
+
+    #[test]
+    fn test_extension_set_debt_cap() {
+        let Env { extension, config, users, .. } = setup_env(
+            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+        );
+
+        create_pool(extension, config, users.creator, Option::None);
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension.set_debt_cap(config.pool_id, config.collateral_asset.contract_address, 1000);
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        assert!(extension.debt_caps(config.pool_id, config.collateral_asset.contract_address) == 1000);
+    }
+
+    #[test]
+    #[should_panic(expected: "caller-not-owner")]
+    fn test_extension_set_debt_cap_caller_not_owner() {
+        let Env { extension, config, users, .. } = setup_env(
+            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+        );
+
+        create_pool(extension, config, users.creator, Option::None);
+
+        extension.set_debt_cap(config.pool_id, config.collateral_asset.contract_address, 1000);
+
+        assert!(extension.debt_caps(config.pool_id, config.collateral_asset.contract_address) == 1000);
     }
 }
