@@ -8,7 +8,7 @@ mod TestPragmaOracle {
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
         singleton::{ISingletonDispatcherTrait, ISingletonDispatcher},
         test::{
-            setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
+            setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
             mock_oracle::{{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait}}
         },
         extension::{
@@ -169,7 +169,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -213,7 +213,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout_stale_price() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -248,7 +248,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_reached() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -284,7 +284,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_not_reached() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;

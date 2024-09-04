@@ -33,6 +33,7 @@ mod vendor {
 
 mod test {
     mod mock_asset;
+    mod mock_chainlink_aggregator;
     mod mock_extension;
     mod mock_oracle;
     mod mock_singleton;
@@ -40,6 +41,7 @@ mod test {
     mod test_asset_retrieval;
     mod test_common;
     mod test_default_extension;
+    mod test_default_extension_v2;
     mod test_flash_loan;
     mod test_forking;
     mod test_interest_rate_model;
