@@ -2,82 +2,30 @@ use alexandria_math::i257::i257;
 use starknet::ContractAddress;
 use vesu::{
     data_model::{AssetParams, LTVParams, LTVConfig},
-    extension::components::{
-        interest_rate_model::InterestRateConfig,
-        position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair}, fee_model::FeeConfig,
-        pragma_oracle::OracleConfig,
-    },
+    extension::{
+        components::{
+            interest_rate_model::InterestRateConfig,
+            position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair},
+            fee_model::FeeConfig, chainlink_oracle::ChainlinkOracleConfig,
+        },
+        default_extension_po::{FeeParams, ShutdownParams, LiquidationParams, VTokenParams}
+    }
 };
 
 #[derive(PartialEq, Copy, Drop, Serde)]
-struct VTokenParams {
-    v_token_name: felt252,
-    v_token_symbol: felt252
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-struct PragmaOracleParams {
-    pragma_key: felt252,
-    timeout: u64, // [seconds]
-    number_of_sources: u32
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-struct ShutdownParams {
-    recovery_period: u64, // [seconds]
-    subscription_period: u64, // [seconds]
-    ltv_params: Span<LTVParams>,
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-struct LiquidationParams {
-    collateral_asset_index: usize,
-    debt_asset_index: usize,
-    liquidation_factor: u64 // [SCALE]
-}
-
-#[derive(PartialEq, Copy, Drop, Serde)]
-struct FeeParams {
-    fee_recipient: ContractAddress
+struct ChainlinkOracleParams {
+    aggregator: ContractAddress,
+    timeout: u64 // [seconds]
 }
 
 #[starknet::interface]
-trait IDefaultExtensionCallback<TContractState> {
-    fn singleton(self: @TContractState) -> ContractAddress;
-}
-
-#[starknet::interface]
-trait ITimestampManagerCallback<TContractState> {
-    fn contains(self: @TContractState, pool_id: felt252, item: u64) -> bool;
-    fn push_front(ref self: TContractState, pool_id: felt252, item: u64);
-    fn remove(ref self: TContractState, pool_id: felt252, item: u64);
-    fn first(self: @TContractState, pool_id: felt252) -> u64;
-    fn last(self: @TContractState, pool_id: felt252) -> u64;
-    fn previous(self: @TContractState, pool_id: felt252, item: u64) -> u64;
-    fn all(self: @TContractState, pool_id: felt252) -> Array<u64>;
-}
-
-#[starknet::interface]
-trait ITokenizationCallback<TContractState> {
-    fn v_token_for_collateral_asset(
-        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress
-    ) -> ContractAddress;
-    fn mint_or_burn_v_token(
-        ref self: TContractState,
-        pool_id: felt252,
-        collateral_asset: ContractAddress,
-        user: ContractAddress,
-        amount: i257
-    );
-}
-
-#[starknet::interface]
-trait IDefaultExtension<TContractState> {
+trait IDefaultExtensionCL<TContractState> {
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
-    fn pragma_oracle(self: @TContractState) -> ContractAddress;
-    fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
-    fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
+    fn chainlink_oracle_config(
+        self: @TContractState, pool_id: felt252, asset: ContractAddress
+    ) -> ChainlinkOracleConfig;
     fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
+    fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
     fn interest_rate_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
@@ -110,7 +58,7 @@ trait IDefaultExtension<TContractState> {
         v_token_params: Span<VTokenParams>,
         ltv_params: Span<LTVParams>,
         interest_rate_configs: Span<InterestRateConfig>,
-        pragma_oracle_params: Span<PragmaOracleParams>,
+        chainlink_oracle_params: Span<ChainlinkOracleParams>,
         liquidation_params: Span<LiquidationParams>,
         shutdown_params: ShutdownParams,
         fee_params: FeeParams,
@@ -122,7 +70,7 @@ trait IDefaultExtension<TContractState> {
         asset_params: AssetParams,
         v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
-        pragma_oracle_params: PragmaOracleParams,
+        chainlink_oracle_params: ChainlinkOracleParams,
         debt_cap: u256
     );
     fn set_asset_parameter(
@@ -132,7 +80,7 @@ trait IDefaultExtension<TContractState> {
     fn set_interest_rate_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
-    fn set_oracle_parameter(
+    fn set_chainlink_oracle_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
     );
     fn set_liquidation_config(
@@ -167,7 +115,7 @@ trait IDefaultExtension<TContractState> {
 }
 
 #[starknet::contract]
-mod DefaultExtension {
+mod DefaultExtensionCL {
     use alexandria_math::i257::i257;
     use starknet::{ContractAddress, get_contract_address, get_caller_address, event::EventEmitter};
     use vesu::extension::components::position_hooks::position_hooks_component::Trait;
@@ -176,11 +124,11 @@ mod DefaultExtension {
         data_model::{Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig},
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
         extension::{
-            default_extension::{
-                LiquidationParams, ShutdownParams, PragmaOracleParams, ITimestampManagerCallback, IDefaultExtension,
-                FeeParams, VTokenParams, IDefaultExtensionCallback, ITokenizationCallback
+            default_extension_po::{
+                LiquidationParams, ShutdownParams, ITimestampManagerCallback, FeeParams, VTokenParams,
+                IDefaultExtensionCallback, ITokenizationCallback
             },
-            interface::{IExtension},
+            default_extension_cl::{IDefaultExtensionCL, ChainlinkOracleParams}, interface::{IExtension},
             components::{
                 interest_rate_model::{
                     InterestRateConfig, interest_rate_model_component,
@@ -190,7 +138,9 @@ mod DefaultExtension {
                     position_hooks_component, position_hooks_component::PositionHooksTrait, ShutdownStatus,
                     ShutdownMode, ShutdownConfig, LiquidationConfig, Pair
                 },
-                pragma_oracle::{pragma_oracle_component, pragma_oracle_component::PragmaOracleTrait, OracleConfig},
+                chainlink_oracle::{
+                    chainlink_oracle_component, chainlink_oracle_component::ChainlinkOracleTrait, ChainlinkOracleConfig
+                },
                 fee_model::{fee_model_component, fee_model_component::FeeModelTrait, FeeConfig},
                 tokenization::{tokenization_component, tokenization_component::TokenizationTrait}
             }
@@ -199,7 +149,7 @@ mod DefaultExtension {
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
     component!(path: interest_rate_model_component, storage: interest_rate_model, event: InterestRateModelEvents);
-    component!(path: pragma_oracle_component, storage: pragma_oracle, event: PragmaOracleEvents);
+    component!(path: chainlink_oracle_component, storage: chainlink_oracle, event: ChainlinkOracleEvents);
     component!(path: map_list_component, storage: timestamp_manager, event: MapListEvents);
     component!(path: fee_model_component, storage: fee_model, event: FeeModelEvents);
     component!(path: tokenization_component, storage: tokenization, event: TokenizationEvents);
@@ -217,9 +167,9 @@ mod DefaultExtension {
         // storage for the interest rate model component
         #[substorage(v0)]
         interest_rate_model: interest_rate_model_component::Storage,
-        // storage for the pragma oracle component
+        // storage for the chainlink oracle component
         #[substorage(v0)]
-        pragma_oracle: pragma_oracle_component::Storage,
+        chainlink_oracle: chainlink_oracle_component::Storage,
         // storage for the timestamp manager component
         #[substorage(v0)]
         timestamp_manager: map_list_component::Storage,
@@ -255,7 +205,7 @@ mod DefaultExtension {
     enum Event {
         PositionHooksEvents: position_hooks_component::Event,
         InterestRateModelEvents: interest_rate_model_component::Event,
-        PragmaOracleEvents: pragma_oracle_component::Event,
+        ChainlinkOracleEvents: chainlink_oracle_component::Event,
         MapListEvents: map_list_component::Event,
         FeeModelEvents: fee_model_component::Event,
         TokenizationEvents: tokenization_component::Event,
@@ -264,14 +214,8 @@ mod DefaultExtension {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-        singleton: ContractAddress,
-        oracle_address: ContractAddress,
-        v_token_class_hash: felt252
-    ) {
+    fn constructor(ref self: ContractState, singleton: ContractAddress, v_token_class_hash: felt252) {
         self.singleton.write(singleton);
-        self.pragma_oracle.set_oracle(oracle_address);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
 
@@ -332,7 +276,7 @@ mod DefaultExtension {
     }
 
     #[abi(embed_v0)]
-    impl DefaultExtensionImpl of IDefaultExtension<ContractState> {
+    impl DefaultExtensionCLImpl of IDefaultExtensionCL<ContractState> {
         /// Returns the owner of a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -342,21 +286,16 @@ mod DefaultExtension {
             self.owner.read(pool_id)
         }
 
-        /// Returns the address of the pragma oracle contract
-        /// # Returns
-        /// * `oracle_address` - address of the pragma oracle contract
-        fn pragma_oracle(self: @ContractState) -> ContractAddress {
-            self.pragma_oracle.oracle_address()
-        }
-
-        /// Returns the oracle configuration for a given pool and asset
+        /// Returns the chainlink oracle configuration for a given pool and asset
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// # Returns
         /// * `oracle_config` - oracle configuration
-        fn oracle_config(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig {
-            self.pragma_oracle.oracle_configs.read((pool_id, asset))
+        fn chainlink_oracle_config(
+            self: @ContractState, pool_id: felt252, asset: ContractAddress
+        ) -> ChainlinkOracleConfig {
+            self.chainlink_oracle.chainlink_oracle_configs.read((pool_id, asset))
         }
 
         /// Returns the fee configuration for a given pool
@@ -511,7 +450,7 @@ mod DefaultExtension {
         /// * `v_token_params` - vToken parameters
         /// * `ltv_params` - loan-to-value parameters
         /// * `interest_rate_params` - interest rate model parameters
-        /// * `pragma_oracle_params` - pragma oracle parameters
+        /// * `chainlink_oracle_params` - chainlink oracle parameters
         /// * `liquidation_params` - liquidation parameters
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
@@ -523,7 +462,7 @@ mod DefaultExtension {
             mut v_token_params: Span<VTokenParams>,
             mut ltv_params: Span<LTVParams>,
             mut interest_rate_configs: Span<InterestRateConfig>,
-            mut pragma_oracle_params: Span<PragmaOracleParams>,
+            mut chainlink_oracle_params: Span<ChainlinkOracleParams>,
             mut liquidation_params: Span<LiquidationParams>,
             shutdown_params: ShutdownParams,
             fee_params: FeeParams,
@@ -532,7 +471,7 @@ mod DefaultExtension {
             assert!(asset_params.len() > 0, "empty-asset-params");
             // assert that all arrays have equal length
             assert!(asset_params.len() == interest_rate_configs.len(), "interest-rate-params-mismatch");
-            assert!(asset_params.len() == pragma_oracle_params.len(), "pragma-oracle-params-mismatch");
+            assert!(asset_params.len() == chainlink_oracle_params.len(), "chainlink-oracle-params-mismatch");
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
@@ -548,11 +487,11 @@ mod DefaultExtension {
                     let asset = *asset_params_copy.pop_front().unwrap().asset;
 
                     // set the oracle config
-                    let params = *pragma_oracle_params.pop_front().unwrap();
-                    let PragmaOracleParams { pragma_key, timeout, number_of_sources } = params;
+                    let params = *chainlink_oracle_params.pop_front().unwrap();
+                    let ChainlinkOracleParams { aggregator, timeout } = params;
                     self
-                        .pragma_oracle
-                        .set_oracle_config(pool_id, asset, OracleConfig { pragma_key, timeout, number_of_sources });
+                        .chainlink_oracle
+                        .set_chainlink_oracle_config(pool_id, asset, ChainlinkOracleConfig { aggregator, timeout });
 
                     // set the interest rate model configuration
                     let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
@@ -614,7 +553,7 @@ mod DefaultExtension {
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
-        /// * `pragma_oracle_params` - pragma oracle parameters
+        /// * `chainlink_oracle_params` - chainlink oracle parameters
         /// * `debt_cap` - debt cap
         fn add_asset(
             ref self: ContractState,
@@ -622,7 +561,7 @@ mod DefaultExtension {
             asset_params: AssetParams,
             v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
-            pragma_oracle_params: PragmaOracleParams,
+            chainlink_oracle_params: ChainlinkOracleParams,
             debt_cap: u256
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
@@ -630,14 +569,12 @@ mod DefaultExtension {
 
             // set the oracle config
             self
-                .pragma_oracle
-                .set_oracle_config(
+                .chainlink_oracle
+                .set_chainlink_oracle_config(
                     pool_id,
                     asset,
-                    OracleConfig {
-                        pragma_key: pragma_oracle_params.pragma_key,
-                        timeout: pragma_oracle_params.timeout,
-                        number_of_sources: pragma_oracle_params.number_of_sources
+                    ChainlinkOracleConfig {
+                        aggregator: chainlink_oracle_params.aggregator, timeout: chainlink_oracle_params.timeout
                     }
                 );
 
@@ -677,17 +614,17 @@ mod DefaultExtension {
             self.interest_rate_model.set_interest_rate_parameter(pool_id, asset, parameter, value);
         }
 
-        /// Sets a parameter for a given oracle configuration of an asset in a pool
+        /// Sets a parameter for a given chainlink oracle configuration of an asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
-        fn set_oracle_parameter(
+        fn set_chainlink_oracle_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.pragma_oracle.set_oracle_parameter(pool_id, asset, parameter, value);
+            self.chainlink_oracle.set_chainlink_oracle_parameter(pool_id, asset, parameter, value);
         }
 
         /// Sets the loan-to-value configuration between two assets (pair) in the pool in the singleton
@@ -830,6 +767,7 @@ mod DefaultExtension {
             self.fee_model.set_fee_config(pool_id, fee_config);
         }
 
+
         /// Claims the fees for a specific pair in a pool.
         /// See `claim_fees` in `fee_model.cairo`.
         /// # Arguments
@@ -856,7 +794,7 @@ mod DefaultExtension {
         /// # Returns
         /// * `AssetPrice` - latest price of the asset and its validity
         fn price(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice {
-            let (value, is_valid) = self.pragma_oracle.price(pool_id, asset);
+            let (value, is_valid) = self.chainlink_oracle.price(pool_id, asset);
             AssetPrice { value, is_valid }
         }
 

@@ -16,7 +16,7 @@ mod TestLiquidatePosition {
             mock_asset::{IMintableDispatcherTrait, IMintableDispatcher},
         },
         extension::{
-            default_extension::{IDefaultExtensionDispatcherTrait},
+            default_extension_po::{IDefaultExtensionDispatcherTrait},
             components::position_hooks::{LiquidationData, LiquidationConfig},
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
         },

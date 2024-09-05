@@ -9,7 +9,7 @@ mod TestModifyPosition {
         singleton::ISingletonDispatcherTrait,
         test::{setup::{setup, TestConfig, LendingTerms}, mock_asset::{IMintableDispatcher, IMintableDispatcherTrait}},
         extension::{
-            default_extension::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
+            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
         }
     };

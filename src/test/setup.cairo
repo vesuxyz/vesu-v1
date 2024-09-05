@@ -7,12 +7,12 @@ use vesu::{
     units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS}, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
     data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams},
     extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-    extension::default_extension::{
+    extension::default_extension_po::{
         IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, InterestRateConfig, PragmaOracleParams,
         LiquidationParams, ShutdownParams, FeeParams, VTokenParams
     },
-    extension::default_extension_v2::{
-        IDefaultExtensionV2Dispatcher, IDefaultExtensionV2DispatcherTrait, ChainlinkOracleParams
+    extension::default_extension_cl::{
+        IDefaultExtensionCLDispatcher, IDefaultExtensionCLDispatcherTrait, ChainlinkOracleParams
     },
     vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
     vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait},
@@ -46,7 +46,7 @@ struct LendingTerms {
 struct Env {
     singleton: ISingletonDispatcher,
     extension: IDefaultExtensionDispatcher,
-    extension_v2: IDefaultExtensionV2Dispatcher,
+    extension_v2: IDefaultExtensionCLDispatcher,
     config: TestConfig,
     users: Users
 }
@@ -138,10 +138,10 @@ fn setup_env(
     let args = array![
         singleton.contract_address.into(), mock_pragma_oracle.contract_address.into(), v_token_class_hash.into()
     ];
-    let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtension", args) };
+    let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtensionPO", args) };
 
     let args = array![singleton.contract_address.into(), v_token_class_hash.into()];
-    let extension_v2 = IDefaultExtensionV2Dispatcher { contract_address: deploy_with_args("DefaultExtensionV2", args) };
+    let extension_v2 = IDefaultExtensionCLDispatcher { contract_address: deploy_with_args("DefaultExtensionCL", args) };
 
     // deploy collateral and borrow assets
     let (collateral_asset, debt_asset, third_asset) = if collateral_address.is_non_zero()
@@ -351,7 +351,7 @@ fn create_pool(
 }
 
 fn create_pool_v2(
-    extension: IDefaultExtensionV2Dispatcher,
+    extension: IDefaultExtensionCLDispatcher,
     config: TestConfig,
     creator: ContractAddress,
     interest_rate_config: Option<InterestRateConfig>,

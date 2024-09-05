@@ -10,8 +10,8 @@ mod units;
 mod v_token;
 
 mod extension {
-    mod default_extension;
-    mod default_extension_v2;
+    mod default_extension_cl;
+    mod default_extension_po;
     mod interface;
     mod components {
         mod chainlink_oracle;
@@ -40,8 +40,8 @@ mod test {
     mod setup;
     mod test_asset_retrieval;
     mod test_common;
-    mod test_default_extension;
-    mod test_default_extension_v2;
+    mod test_default_extension_cl;
+    mod test_default_extension_po;
     mod test_flash_loan;
     mod test_forking;
     mod test_interest_rate_model;

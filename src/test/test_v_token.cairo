@@ -7,7 +7,8 @@ mod TestVToken {
     };
     use starknet::{ContractAddress, get_contract_address, get_caller_address, deploy_syscall, contract_address_const};
     use vesu::{
-        extension::default_extension::IDefaultExtensionDispatcherTrait, units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
+        extension::default_extension_po::IDefaultExtensionDispatcherTrait,
+        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
         data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination, ModifyPositionParams},
         math::pow_10,
         common::{

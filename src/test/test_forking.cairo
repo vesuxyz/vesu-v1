@@ -25,7 +25,7 @@ mod TestForking {
         vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension::{
+            default_extension_po::{
                 IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, PragmaOracleParams, InterestRateConfig,
                 LiquidationParams, ShutdownParams, FeeParams, VTokenParams, ShutdownMode
             },
@@ -389,7 +389,7 @@ mod TestForking {
         let v_token_class_hash = declare("VToken").class_hash;
         let extension = IDefaultExtensionDispatcher {
             contract_address: deploy_with_args(
-                "DefaultExtension",
+                "DefaultExtensionPO",
                 array![singleton.contract_address.into(), pragma_oracle_address.into(), v_token_class_hash.into()]
             )
         };

@@ -80,7 +80,7 @@ mod position_hooks_component {
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
         common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value, calculate_debt},
         extension::{
-            default_extension::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
+            default_extension_po::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
             components::position_hooks::{
                 ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
                 assert_shutdown_config, assert_liquidation_config

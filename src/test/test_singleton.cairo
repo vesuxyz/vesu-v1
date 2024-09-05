@@ -10,7 +10,7 @@ mod TestSingleton {
         },
         singleton::{ISingletonDispatcherTrait},
         data_model::{AssetParams, LTVParams, LTVConfig, ModifyPositionParams, Amount, AmountType, AmountDenomination},
-        extension::default_extension::{
+        extension::default_extension_po::{
             InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionDispatcherTrait, ShutdownParams,
             FeeParams, LiquidationConfig, ShutdownConfig
         },
