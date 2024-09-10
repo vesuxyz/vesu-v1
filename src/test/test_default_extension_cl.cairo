@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestDefaultExtensionCL {
     use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare};
-    use starknet::{get_contract_address, contract_address_const};
+    use starknet::{get_contract_address, contract_address_const, get_block_number};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
         test::setup::{setup_env, create_pool, create_pool_v2, TestConfig, deploy_assets, deploy_asset, Env},
@@ -11,8 +11,13 @@ mod TestDefaultExtensionCL {
             ShutdownConfig, FeeConfig
         },
         extension::default_extension_cl::{ChainlinkOracleParams, IDefaultExtensionCLDispatcherTrait},
-        test::setup::{COLL_PRAGMA_KEY, deploy_asset_with_decimals, test_interest_rate_config}
+        test::setup::{COLL_PRAGMA_KEY, deploy_asset_with_decimals, test_interest_rate_config},
+        extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait}
     };
+
+    fn to_percent(value: u256) -> u64 {
+        (value * PERCENT).try_into().unwrap()
+    }
 
     #[test]
     fn test_create_pool_v2() {
@@ -405,6 +410,63 @@ mod TestDefaultExtensionCL {
         assert!(asset_config.last_rate_accumulator >= SCALE, "Last rate accumulator too low");
         assert!(asset_config.last_rate_accumulator < 10 * SCALE, "Last rate accumulator too high");
     }
+
+    // #[test]
+    // #[fork("Mainnet", block_number: 693670)]
+    // fn test_add_asset_fork() {
+    //     println!("{}", get_block_number());
+
+    //     let Env { singleton, extension_v2, config, users, .. } = setup_env(
+    //         Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+    //     );
+
+    //     create_pool_v2(extension_v2, config, users.creator, Option::None);
+
+    //     let asset_params = AssetParams {
+    //         asset: contract_address_const::<0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8>(),
+    //         floor: 1000000000000000000, // 1
+    //         initial_rate_accumulator: SCALE,
+    //         initial_full_utilization_rate: to_percent(50).into(),
+    //         max_utilization: to_percent(80).into(),
+    //         is_legacy: false,
+    //         fee_rate: 0
+    //     };
+
+    //     let v_token_params = VTokenParams { v_token_name: 'Vesu USD Coin', v_token_symbol: 'vUSDC' };
+
+    //     let interest_rate_config = InterestRateConfig {
+    //         min_target_utilization: 75_000,
+    //         max_target_utilization: 85_000,
+    //         target_utilization: 87_500,
+    //         min_full_utilization_rate: 1582470460,
+    //         max_full_utilization_rate: 32150205761,
+    //         zero_utilization_rate: 158247046,
+    //         rate_half_life: 172_800,
+    //         target_rate_percent: 20 * PERCENT,
+    //     };
+
+    //     let chainlink_oracle_params = ChainlinkOracleParams {
+    //         aggregator: contract_address_const::<0x72495dbb867dd3c6373820694008f8a8bff7b41f7f7112245d687858b243470>(),
+    //         timeout: 1
+    //     };
+
+    //     start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+    //     extension_v2
+    //         .add_asset(
+    //             config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
+    //         );
+    //     stop_prank(CheatTarget::One(extension_v2.contract_address));
+
+    //     let (asset_config, _) = singleton.asset_config(config.pool_id_v2, config.collateral_asset.contract_address);
+    //     assert!(asset_config.floor != 0, "Asset config not set");
+    //     assert!(asset_config.scale == config.collateral_scale, "Invalid scale");
+    //     assert!(asset_config.last_rate_accumulator >= SCALE, "Last rate accumulator too low");
+    //     assert!(asset_config.last_rate_accumulator < 10 * SCALE, "Last rate accumulator too high");
+
+    //     let price = IExtensionDispatcher { contract_address: extension_v2.contract_address }
+    //         .price(config.pool_id_v2, asset_params.asset);
+    //     assert!(price.value > 0, "Price not set");
+    // }
 
     #[test]
     #[should_panic(expected: "caller-not-owner")]
