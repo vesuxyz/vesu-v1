@@ -22,7 +22,7 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "Mainnet"
 url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_6"
-block_id.number = "652612"
+block_id.number = "652612" # "700000"
 
 [tool.voyager]
 singleton = { path = "singleton.cairo" }

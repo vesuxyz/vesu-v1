@@ -700,12 +700,14 @@ mod TestForking {
         let liquidation_params = generate_liquidation_params(asset_params, ((9 * SCALE) / 10).try_into().unwrap());
         let shutdown_params = generate_shutdown_params(asset_params);
 
-        let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
-        // let singleton = ISingletonDispatcher {
-        //     contract_address: contract_address_const::<0x2545b2e5d519fc230e9cd781046d3a64e092114f07e44771e0d719d148725ef>()
-        // };
-        let v_token_class_hash = declare("VToken").class_hash;
-        // let v_token_class_hash = 0x05c64c6cb528bdbffe4187ba3385ff3843b43e8375ad4c3ddd6c28c1d5193576;
+        // let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
+        let singleton = ISingletonDispatcher {
+            contract_address: contract_address_const::<
+                0x2545b2e5d519fc230e9cd781046d3a64e092114f07e44771e0d719d148725ef
+            >()
+        };
+        // let v_token_class_hash = declare("VToken").class_hash;
+        let v_token_class_hash = 0x05c64c6cb528bdbffe4187ba3385ff3843b43e8375ad4c3ddd6c28c1d5193576;
         let extension = IDefaultExtensionCLDispatcher {
             contract_address: deploy_with_args(
                 "DefaultExtensionCL", array![singleton.contract_address.into(), v_token_class_hash.into()]
@@ -1419,8 +1421,8 @@ mod TestForking {
 // #[available_gas(2000000)]
 // #[fork("Mainnet")]
 // fn test_fork_cl_liquidate_position() {
-//     let params = setup();
-//     let SetupParams { singleton,
+//     let params = setup_cl();
+//     let SetupParamsCL { singleton,
 //     extension,
 //     eth,
 //     usdc,
@@ -1431,7 +1433,8 @@ mod TestForking {
 //     supply_amount_usdc,
 //     borrow_amount_eth,
 //     borrow_amount_usdc,
-//     pool_id } =
+//     pool_id,
+//     .. } =
 //         params;
 
 //     // supply
@@ -1520,35 +1523,42 @@ mod TestForking {
 
 //     // liquidate
 
-//     let mock_chainlink_aggregator = IMockChainlinkAggregatorDispatcher { contract_address: deploy_contract("MockChainlinkAggregator") };
-//     mock_chainlink_aggregator.set_round(Round {
-//         round_id: 1,
-//         answer: 1_00000000,
-//         block_num: get_block_number(),
-//         started_at: get_block_timestamp(),
-//         updated_at: get_block_timestamp()
-//     });
-//     // let price = IExtensionDispatcher { contract_address: extension.contract_address }
-//     //     .price(pool_id, eth.contract_address);
-//     // mock_pragma_oracle.set_price('ETH/USD', price.value.try_into().unwrap()); // 3717400000000000000000
+//     let mock_chainlink_aggregator = IMockChainlinkAggregatorDispatcher {
+//         contract_address: deploy_contract("MockChainlinkAggregator")
+//     };
+//     mock_chainlink_aggregator
+//         .set_round(
+//             Round {
+//                 round_id: 1,
+//                 answer: 1_00000000,
+//                 block_num: get_block_number(),
+//                 started_at: get_block_timestamp(),
+//                 updated_at: get_block_timestamp()
+//             }
+//         );
 
 //     store(
 //         extension.contract_address,
 //         map_entry_address(
-//             selector!("chainlink_oracle_configs"),
-//             array![usdc.contract_address.into()].span(),
+//             selector!("chainlink_oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),
 //         ),
 //         array![mock_chainlink_aggregator.contract_address.into()].span()
 //     );
 
+//     let config = extension.chainlink_oracle_config(pool_id, usdc.contract_address);
+//     assert!(config.aggregator == mock_chainlink_aggregator.contract_address, "Oracle address is not set");
+
 //     // reduce oracle price
-//     mock_chainlink_aggregator.set_round(Round {
-//         round_id: 1,
-//         answer: 50000000,
-//         block_num: get_block_number(),
-//         started_at: get_block_timestamp(),
-//         updated_at: get_block_timestamp()
-//     });
+//     mock_chainlink_aggregator
+//         .set_round(
+//             Round {
+//                 round_id: 1,
+//                 answer: 50000000,
+//                 block_num: get_block_number(),
+//                 started_at: get_block_timestamp(),
+//                 updated_at: get_block_timestamp()
+//             }
+//         );
 
 //     let mut liquidation_data: Array<felt252> = ArrayTrait::new();
 //     LiquidationData { min_collateral_to_receive: 0, debt_to_repay: borrow_amount_eth / 2 }
@@ -1575,9 +1585,9 @@ mod TestForking {
 // #[test]
 // #[available_gas(2000000)]
 // #[fork("Mainnet")]
-// fn test_fork_shutdown() {
-//     let params = setup();
-//     let SetupParams { singleton,
+// fn test_fork_cl_shutdown() {
+//     let params = setup_cl();
+//     let SetupParamsCL { singleton,
 //     extension,
 //     eth,
 //     usdc,
@@ -1671,22 +1681,42 @@ mod TestForking {
 
 //     start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
 
-//     let mock_pragma_oracle = IMockPragmaOracleDispatcher { contract_address: deploy_contract("MockPragmaOracle") };
-//     mock_pragma_oracle.set_num_sources_aggregated('USDC/USD', 2);
-//     mock_pragma_oracle.set_price('USDC/USD', SCALE_128);
-//     let price = IExtensionDispatcher { contract_address: extension.contract_address }
-//         .price(pool_id, eth.contract_address);
-//     mock_pragma_oracle.set_price('ETH/USD', price.value.try_into().unwrap()); // 3717400000000000000000
+//     let mock_chainlink_aggregator = IMockChainlinkAggregatorDispatcher {
+//         contract_address: deploy_contract("MockChainlinkAggregator")
+//     };
+//     mock_chainlink_aggregator
+//         .set_round(
+//             Round {
+//                 round_id: 1,
+//                 answer: 1_00000000,
+//                 block_num: get_block_number(),
+//                 started_at: get_block_timestamp(),
+//                 updated_at: get_block_timestamp()
+//             }
+//         );
 
 //     store(
 //         extension.contract_address,
-//         selector!("oracle_address"),
-//         array![mock_pragma_oracle.contract_address.into()].span()
+//         map_entry_address(
+//             selector!("chainlink_oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),
+//         ),
+//         array![mock_chainlink_aggregator.contract_address.into()].span()
 //     );
 
-//     // shutdown
-//     mock_pragma_oracle.set_price('USDC/USD', SCALE_128);
-//     mock_pragma_oracle.set_num_sources_aggregated('USDC/USD', 1);
+//     let config = extension.chainlink_oracle_config(pool_id, usdc.contract_address);
+//     assert!(config.aggregator == mock_chainlink_aggregator.contract_address, "Oracle address is not set");
+
+//     // reduce oracle price
+//     mock_chainlink_aggregator
+//         .set_round(
+//             Round {
+//                 round_id: 1,
+//                 answer: 1,
+//                 block_num: get_block_number(),
+//                 started_at: get_block_timestamp(),
+//                 updated_at: get_block_timestamp()
+//             }
+//         );
 
 //     extension.update_shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
 //     let shutdown_status = extension.shutdown_status(pool_id, usdc.contract_address, eth.contract_address);
