@@ -1,7 +1,7 @@
 #[starknet::contract]
 mod ListContract {
     use vesu::{
-        extension::default_extension::{ITimestampManagerCallback},
+        extension::default_extension_po::{ITimestampManagerCallback},
         map_list::{map_list_component, map_list_component::MapListTrait},
     };
 
@@ -48,7 +48,7 @@ mod ListContract {
 #[cfg(test)]
 mod TestMapList {
     use snforge_std::{declare, ContractClassTrait};
-    use vesu::extension::default_extension::{
+    use vesu::extension::default_extension_po::{
         ITimestampManagerCallback, ITimestampManagerCallbackDispatcher, ITimestampManagerCallbackDispatcherTrait,
         ITimestampManagerCallbackSafeDispatcher, ITimestampManagerCallbackSafeDispatcherTrait
     };

@@ -5,7 +5,7 @@ mod TestReentrancy {
     };
     use starknet::{ContractAddress, get_contract_address, get_block_timestamp};
     use vesu::{
-        test::setup::{setup_env, TestConfig, LendingTerms, deploy_with_args},
+        test::setup::{setup_env, TestConfig, LendingTerms, deploy_with_args, Env},
         extension::interface::{IExtensionDispatcherTrait, IExtensionDispatcher},
         units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10,
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, ModifyPositionParams},
@@ -16,7 +16,7 @@ mod TestReentrancy {
     #[test]
     #[should_panic(expected: "context-reentrancy")]
     fn test_context_reentrancy() {
-        let (singleton, _, config, users) = setup_env(
+        let Env { singleton, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
         let TestConfig { debt_asset, debt_scale, .. } = config;
@@ -78,7 +78,7 @@ mod TestReentrancy {
     #[test]
     #[should_panic(expected: "asset-config-reentrancy")]
     fn test_asset_config_reentrancy() {
-        let (singleton, _, config, _) = setup_env(
+        let Env { singleton, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
         let TestConfig { debt_asset, .. } = config;
