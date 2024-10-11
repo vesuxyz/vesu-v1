@@ -38,7 +38,7 @@ mod VToken {
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, ShutdownMode},
+            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, ShutdownMode},
         },
         v_token::IVToken,
         vendor::{

@@ -14,7 +14,7 @@ mod fee_model_component {
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, ModifyPositionParams, UpdatePositionResponse},
         data_model::{Amount, AmountDenomination, AmountType},
         extension::{
-            components::fee_model::FeeConfig, default_extension::{IDefaultExtensionCallback, ITokenizationCallback}
+            components::fee_model::FeeConfig, default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback}
         },
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}
     };
