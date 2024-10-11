@@ -170,18 +170,23 @@ fn calculate_rate_accumulator(last_updated: u64, last_rate_accumulator: u256, in
 /// # Returns
 /// * `fee_shares` - fee shares amount [SCALE]
 fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -> u256 {
-    let rate_accumulator_delta = if new_rate_accumulator > asset_config.last_rate_accumulator {
-        new_rate_accumulator - asset_config.last_rate_accumulator
+    let AssetConfig { reserve, total_nominal_debt, total_collateral_shares, last_rate_accumulator, scale, fee_rate, .. } = asset_config;
+
+    let rate_accumulator_delta = if new_rate_accumulator > last_rate_accumulator {
+        new_rate_accumulator - last_rate_accumulator
     } else {
         0
     };
-    calculate_collateral_shares(
-        calculate_debt(asset_config.total_nominal_debt, rate_accumulator_delta, asset_config.scale, false),
-        asset_config,
-        false
-    )
-        * asset_config.fee_rate
-        / SCALE
+
+    let interest = calculate_debt(total_nominal_debt, rate_accumulator_delta, scale, false);
+    // println!("interest: {}", interest);
+    let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
+    // println!("total_debt: {}", total_debt);
+    let total_assets = reserve + total_debt;
+    // println!("total_assets: {}", total_assets);
+    let fee_shares = ((interest * fee_rate / SCALE) * total_collateral_shares) / (total_assets + ((SCALE - fee_rate) * interest / SCALE));
+    // println!("fee_shares: {}", fee_shares);
+    fee_shares
 }
 
 /// Deconstructs the collateral amount into collateral delta, collateral shares delta and it's sign
