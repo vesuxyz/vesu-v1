@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod TestCommon {
+    use starknet::get_block_timestamp;
     use alexandria_math::i257::{i257, i257_new, U256IntoI257};
     use snforge_std::{cheatcodes::{start_warp, stop_warp, CheatTarget}};
     use vesu::data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination};
@@ -232,15 +233,17 @@ mod TestCommon {
         assert!(calculate_fee_shares(asset_config, SCALE) == 0, "Fee shares should be 0");
 
         let fee_shares = calculate_fee_shares(asset_config, SCALE + (SCALE * 10 / 100));
-        asset_config.last_rate_accumulator = SCALE + (SCALE * 10 / 100);
+
         asset_config.total_collateral_shares += fee_shares;
+        asset_config.last_rate_accumulator = SCALE + (SCALE * 10 / 100);
+        asset_config.last_updated = get_block_timestamp();
         let fee = calculate_collateral(fee_shares, asset_config, false);
 
         println!("fee:              {}", fee);
-        println!("asset_scale / 10: {}", asset_scale / 10);
+        println!("asset_scale * 10: {}", asset_scale * 10);
 
         assert!(
-            fee + 1 == asset_scale / 10,
+            fee + 1 == asset_scale * 10,
             "Fee shares should be 10% of the reserve"
         );
     }

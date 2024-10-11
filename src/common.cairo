@@ -179,13 +179,15 @@ fn calculate_fee_shares(asset_config: AssetConfig, new_rate_accumulator: u256) -
     };
 
     let interest = calculate_debt(total_nominal_debt, rate_accumulator_delta, scale, false);
-    // println!("interest: {}", interest);
+    println!("interest:     {}", interest);
     let total_debt = calculate_debt(total_nominal_debt, last_rate_accumulator, scale, false);
-    // println!("total_debt: {}", total_debt);
+    println!("total_debt:   {}", total_debt);
     let total_assets = reserve + total_debt;
-    // println!("total_assets: {}", total_assets);
+    println!("total_assets: {}", total_assets);
+    println!("shares:       {}", total_collateral_shares);
     let fee_shares = ((interest * fee_rate / SCALE) * total_collateral_shares) / (total_assets + ((SCALE - fee_rate) * interest / SCALE));
-    // println!("fee_shares: {}", fee_shares);
+    println!("fee_shares:   {}", fee_shares);
+    println!("fee_rate:     {}", fee_rate);    
     fee_shares
 }
 
