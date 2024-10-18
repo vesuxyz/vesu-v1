@@ -7,6 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: software-mansion/setup-scarb@v1
+
       - uses: foundry-rs/setup-snfoundry@v3
+
+      - name: Set .env vars
+        run: echo "MAINNET_RPC_URL=${{ secrets.MAINNET_RPC_URL }}" >> .env
+
+      - name: Patch Scarb.toml
+        run: ./scripts/patchScarbToml.sh
+
       - run: snforge test
