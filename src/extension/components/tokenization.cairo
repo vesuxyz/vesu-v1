@@ -5,7 +5,7 @@ mod tokenization_component {
     use starknet::{ContractAddress, get_contract_address, deploy_syscall};
     use vesu::{
         units::SCALE, data_model::Amount, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-        extension::default_extension::IDefaultExtensionCallback, v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}
+        extension::default_extension_po::IDefaultExtensionCallback, v_token::{IVTokenDispatcher, IVTokenDispatcherTrait}
     };
 
     #[storage]
