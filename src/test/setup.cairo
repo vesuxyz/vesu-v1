@@ -7,13 +7,17 @@ use vesu::{
     units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS}, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
     data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams},
     extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-    extension::default_extension::{
+    extension::default_extension_po::{
         IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, InterestRateConfig, PragmaOracleParams,
         LiquidationParams, ShutdownParams, FeeParams, VTokenParams
+    },
+    extension::default_extension_cl::{
+        IDefaultExtensionCLDispatcher, IDefaultExtensionCLDispatcherTrait, ChainlinkOracleParams
     },
     vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
     vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait},
     test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
+    test::mock_chainlink_aggregator::{IMockChainlinkAggregatorDispatcher, IMockChainlinkAggregatorDispatcherTrait}
 };
 
 const COLL_PRAGMA_KEY: felt252 = 19514442401534788;
@@ -39,8 +43,18 @@ struct LendingTerms {
 }
 
 #[derive(Copy, Drop, Serde)]
+struct Env {
+    singleton: ISingletonDispatcher,
+    extension: IDefaultExtensionDispatcher,
+    extension_v2: IDefaultExtensionCLDispatcher,
+    config: TestConfig,
+    users: Users
+}
+
+#[derive(Copy, Drop, Serde)]
 struct TestConfig {
     pool_id: felt252,
+    pool_id_v2: felt252,
     collateral_asset: IERC20Dispatcher,
     debt_asset: IERC20Dispatcher,
     third_asset: IERC20Dispatcher,
@@ -99,7 +113,7 @@ fn setup_env(
     collateral_address: ContractAddress,
     debt_address: ContractAddress,
     third_address: ContractAddress
-) -> (ISingletonDispatcher, IDefaultExtensionDispatcher, TestConfig, Users) {
+) -> Env {
     let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
 
     start_warp(CheatTarget::All, get_block_timestamp() + 1);
@@ -124,7 +138,10 @@ fn setup_env(
     let args = array![
         singleton.contract_address.into(), mock_pragma_oracle.contract_address.into(), v_token_class_hash.into()
     ];
-    let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtension", args) };
+    let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtensionPO", args) };
+
+    let args = array![singleton.contract_address.into(), v_token_class_hash.into()];
+    let extension_v2 = IDefaultExtensionCLDispatcher { contract_address: deploy_with_args("DefaultExtensionCL", args) };
 
     // deploy collateral and borrow assets
     let (collateral_asset, debt_asset, third_asset) = if collateral_address.is_non_zero()
@@ -169,14 +186,15 @@ fn setup_env(
 
     // create pool config
     let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
+    let pool_id_v2 = singleton.calculate_pool_id(extension_v2.contract_address, 1);
     let collateral_scale = pow_10(collateral_asset.decimals().into());
     let debt_scale = pow_10(debt_asset.decimals().into());
     let third_scale = pow_10(third_asset.decimals().into());
     let config = TestConfig {
-        pool_id, collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale
+        pool_id, pool_id_v2, collateral_asset, debt_asset, collateral_scale, debt_scale, third_asset, third_scale
     };
 
-    (singleton, extension, config, users)
+    Env { singleton, extension, extension_v2, config, users }
 }
 
 fn test_interest_rate_config() -> InterestRateConfig {
@@ -332,6 +350,161 @@ fn create_pool(
     );
 }
 
+fn create_pool_v2(
+    extension: IDefaultExtensionCLDispatcher,
+    config: TestConfig,
+    creator: ContractAddress,
+    interest_rate_config: Option<InterestRateConfig>,
+) {
+    let interest_rate_config = interest_rate_config.unwrap_or(test_interest_rate_config());
+
+    let collateral_asset_params = AssetParams {
+        asset: config.collateral_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: true,
+        fee_rate: 0
+    };
+    let debt_asset_params = AssetParams {
+        asset: config.debt_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: false,
+        fee_rate: 0
+    };
+    let third_asset_params = AssetParams {
+        asset: config.third_asset.contract_address,
+        floor: SCALE / 10_000,
+        initial_rate_accumulator: SCALE,
+        initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+        max_utilization: SCALE,
+        is_legacy: false,
+        fee_rate: 1 * PERCENT
+    };
+
+    let class = declare("MockChainlinkAggregator");
+    let calldata = array![];
+    let collateral_mock_oracle = IMockChainlinkAggregatorDispatcher {
+        contract_address: class.deploy(@calldata).unwrap()
+    };
+    let debt_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let third_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address: class.deploy(@calldata).unwrap() };
+
+    let collateral_asset_oracle_params = ChainlinkOracleParams {
+        aggregator: collateral_mock_oracle.contract_address, timeout: 0
+    };
+    let debt_asset_oracle_params = ChainlinkOracleParams { aggregator: debt_mock_oracle.contract_address, timeout: 0 };
+    let third_asset_oracle_params = ChainlinkOracleParams {
+        aggregator: third_mock_oracle.contract_address, timeout: 0
+    };
+
+    let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
+    let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };
+    let third_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Third', v_token_symbol: 'vTHIRD' };
+
+    // create ltv config for collateral and borrow assets
+    let max_position_ltv_params_0 = LTVParams {
+        collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (80 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_1 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (80 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_2 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 2, max_ltv: (85 * PERCENT).try_into().unwrap()
+    };
+    let max_position_ltv_params_3 = LTVParams {
+        collateral_asset_index: 2, debt_asset_index: 1, max_ltv: (85 * PERCENT).try_into().unwrap()
+    };
+
+    let liquidation_params_0 = LiquidationParams {
+        collateral_asset_index: 0, debt_asset_index: 1, liquidation_factor: 0
+    };
+    let liquidation_params_1 = LiquidationParams {
+        collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0
+    };
+    let liquidation_params_2 = LiquidationParams {
+        collateral_asset_index: 0, debt_asset_index: 2, liquidation_factor: 0
+    };
+    let liquidation_params_3 = LiquidationParams {
+        collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
+    };
+
+    let shutdown_ltv_params_0 = LTVParams {
+        collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_1 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_2 = LTVParams {
+        collateral_asset_index: 0, debt_asset_index: 2, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params_3 = LTVParams {
+        collateral_asset_index: 2, debt_asset_index: 1, max_ltv: (75 * PERCENT).try_into().unwrap()
+    };
+    let shutdown_ltv_params = array![
+        shutdown_ltv_params_0, shutdown_ltv_params_1, shutdown_ltv_params_2, shutdown_ltv_params_3
+    ]
+        .span();
+
+    let asset_params = array![collateral_asset_params, debt_asset_params, third_asset_params].span();
+    let v_token_params = array![collateral_asset_v_token_params, debt_asset_v_token_params, third_asset_v_token_params]
+        .span();
+    let max_position_ltv_params = array![
+        max_position_ltv_params_0, max_position_ltv_params_1, max_position_ltv_params_2, max_position_ltv_params_3
+    ]
+        .span();
+    let interest_rate_configs = array![interest_rate_config, interest_rate_config, interest_rate_config].span();
+    let chainlink_oracle_params = array![
+        collateral_asset_oracle_params, debt_asset_oracle_params, third_asset_oracle_params
+    ]
+        .span();
+    let liquidation_params = array![
+        liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
+    ]
+        .span();
+    let shutdown_params = ShutdownParams {
+        recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
+    };
+
+    start_prank(CheatTarget::One(extension.contract_address), creator);
+    extension
+        .create_pool(
+            asset_params,
+            v_token_params,
+            max_position_ltv_params,
+            interest_rate_configs,
+            chainlink_oracle_params,
+            liquidation_params,
+            shutdown_params,
+            FeeParams { fee_recipient: creator },
+            creator
+        );
+    stop_prank(CheatTarget::One(extension.contract_address));
+
+    let coll_v_token = extension
+        .v_token_for_collateral_asset(config.pool_id_v2, config.collateral_asset.contract_address);
+    let debt_v_token = extension.v_token_for_collateral_asset(config.pool_id_v2, config.debt_asset.contract_address);
+    let third_v_token = extension.v_token_for_collateral_asset(config.pool_id_v2, config.third_asset.contract_address);
+
+    assert!(coll_v_token != Zeroable::zero(), "vToken not set");
+    assert!(debt_v_token != Zeroable::zero(), "vToken not set");
+    assert!(third_v_token != Zeroable::zero(), "vToken not set");
+
+    assert!(
+        extension.collateral_asset_for_v_token(config.pool_id_v2, coll_v_token) != Zeroable::zero(), "vToken not set"
+    );
+    assert!(
+        extension.collateral_asset_for_v_token(config.pool_id_v2, debt_v_token) != Zeroable::zero(), "vToken not set"
+    );
+    assert!(
+        extension.collateral_asset_for_v_token(config.pool_id_v2, third_v_token) != Zeroable::zero(), "vToken not set"
+    );
+}
+
 fn setup_pool(
     oracle_address: ContractAddress,
     collateral_address: ContractAddress,
@@ -340,7 +513,7 @@ fn setup_pool(
     fund_borrower: bool,
     interest_rate_config: Option<InterestRateConfig>,
 ) -> (ISingletonDispatcher, IDefaultExtensionDispatcher, TestConfig, Users, LendingTerms) {
-    let (singleton, extension, config, users) = setup_env(
+    let Env { singleton, extension, config, users, .. } = setup_env(
         oracle_address, collateral_address, debt_address, third_address
     );
 

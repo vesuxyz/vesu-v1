@@ -8,12 +8,12 @@ mod TestPragmaOracle {
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
         singleton::{ISingletonDispatcherTrait, ISingletonDispatcher},
         test::{
-            setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY},
+            setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
             mock_oracle::{{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait}}
         },
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension::{
+            default_extension_po::{
                 IDefaultExtensionDispatcherTrait, IDefaultExtensionDispatcher, InterestRateConfig, PragmaOracleParams,
                 LiquidationParams, ShutdownParams, FeeParams, VTokenParams
             }
@@ -125,10 +125,10 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_default_price() {
-        let (_, default_extension, config, _, _) = setup();
+        let (_, default_extension_po, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension.contract_address };
+        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
         let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
@@ -141,12 +141,12 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_get_price_high() {
-        let (_, default_extension, config, _, _) = setup();
+        let (_, default_extension_po, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
 
-        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension.contract_address };
+        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
 
-        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension.pragma_oracle() };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
 
         let max: u128 = integer::BoundedInt::max();
         // set collateral asset price
@@ -169,7 +169,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -213,7 +213,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_timeout_stale_price() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -248,7 +248,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_reached() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;
@@ -284,7 +284,7 @@ mod TestPragmaOracle {
 
     #[test]
     fn test_is_valid_sources_not_reached() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero(),
         );
         let TestConfig { collateral_asset, debt_asset, .. } = config;

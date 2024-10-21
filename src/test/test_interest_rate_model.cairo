@@ -6,7 +6,7 @@ mod TestInterestRateModel {
         units::{SCALE, PERCENT, FRACTION, YEAR_IN_SECONDS, DAY_IN_SECONDS}, math::{pow_scale},
         common::{calculate_utilization, calculate_debt, calculate_nominal_debt}, singleton::AssetConfig,
         extension::{
-            default_extension::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
+            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait},
             components::interest_rate_model::{
                 interest_rate_model_component::calculate_interest_rate, InterestRateConfig, InterestRateConfigPacking
             }

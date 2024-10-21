@@ -106,7 +106,7 @@ mod interest_rate_model_component {
     use vesu::{
         units::SCALE, common::calculate_rate_accumulator,
         extension::{
-            default_extension::{IDefaultExtensionCallback, ITokenizationCallback},
+            default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback},
             components::interest_rate_model::{
                 InterestRateConfig, assert_interest_rate_config, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE
             }

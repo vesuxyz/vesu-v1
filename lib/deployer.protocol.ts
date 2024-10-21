@@ -64,7 +64,7 @@ export class Deployer extends BaseDeployer {
       oracle_address: oracleAddress,
       v_token_class_hash: v_token_class_hash,
     });
-    const [extension, calls2] = await this.deferContract("DefaultExtension", calldata);
+    const [extension, calls2] = await this.deferContract("DefaultExtensionPO", calldata);
     return [{ singleton, extension }, [...calls1, ...calls2]] as const;
   }
 

@@ -28,7 +28,7 @@ mod TestUser {
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
-            default_extension::{
+            default_extension_po::{
                 IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, PragmaOracleParams, InterestRateConfig,
                 LiquidationParams, ShutdownParams, FeeParams, VTokenParams, ShutdownMode
             },
@@ -60,7 +60,7 @@ mod TestUser {
             >()
         };
 
-        replace_bytecode(extension.contract_address, declare("DefaultExtension").class_hash);
+        replace_bytecode(extension.contract_address, declare("DefaultExtensionPO").class_hash);
 
         let pool_id = 3601893553453722691657585476026095435475878278287859441667450345178654480585;
         let collateral_asset = IERC20Dispatcher {

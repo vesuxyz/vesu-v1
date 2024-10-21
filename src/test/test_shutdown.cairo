@@ -17,7 +17,7 @@ mod TestShutdown {
             },
         },
         extension::{
-            default_extension::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, InterestRateConfig},
+            default_extension_po::{IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, InterestRateConfig},
             components::position_hooks::{ShutdownMode}
         },
         v_token::{IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenDispatcher, IVTokenDispatcherTrait},

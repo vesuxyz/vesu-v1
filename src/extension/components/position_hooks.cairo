@@ -78,9 +78,9 @@ mod position_hooks_component {
         units::SCALE, math::pow_10,
         data_model::{Amount, Context, Position, LTVConfig, assert_ltv_config, UnsignedAmount},
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-        common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value},
+        common::{calculate_collateral, is_collateralized, calculate_collateral_and_debt_value, calculate_debt},
         extension::{
-            default_extension::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
+            default_extension_po::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
             components::position_hooks::{
                 ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
                 assert_shutdown_config, assert_liquidation_config
@@ -107,7 +107,9 @@ mod position_hooks_component {
         violation_timestamp_counts: LegacyMap::<(felt252, u64), u128>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>
+        pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>,
+        // tracks the debt caps for each asset
+        debt_caps: LegacyMap::<(felt252, ContractAddress), u256>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -180,6 +182,17 @@ mod position_hooks_component {
                 .shutdown_ltv_configs
                 .read((context.pool_id, context.collateral_asset, context.debt_asset));
             is_collateralized(collateral_value, debt_value, max_ltv.into())
+        }
+
+        /// Sets the debt cap for an asset in a pool.
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `asset` - address of the debt asset
+        /// * `debt_cap` - debt cap
+        fn set_debt_cap(
+            ref self: ComponentState<TContractState>, pool_id: felt252, asset: ContractAddress, debt_cap: u256
+        ) {
+            self.debt_caps.write((pool_id, asset), debt_cap);
         }
 
         /// Sets the liquidation configuration for an asset pairing in a pool.
@@ -393,6 +406,18 @@ mod position_hooks_component {
             }
             if nominal_debt_delta > Zeroable::zero() {
                 total_nominal_debt = total_nominal_debt + nominal_debt_delta.abs;
+                let debt_cap = self.debt_caps.read((context.pool_id, context.debt_asset));
+                if debt_cap != 0 {
+                    let total_debt = calculate_debt(
+                        total_nominal_debt,
+                        context.debt_asset_config.last_rate_accumulator,
+                        context.debt_asset_config.scale,
+                        true
+                    );
+                    assert!(
+                        total_debt <= self.debt_caps.read((context.pool_id, context.debt_asset)), "debt-cap-exceeded"
+                    );
+                }
             } else if nominal_debt_delta < Zeroable::zero() {
                 total_nominal_debt = total_nominal_debt - nominal_debt_delta.abs;
             }

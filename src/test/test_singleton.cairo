@@ -6,11 +6,11 @@ mod TestSingleton {
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
         test::setup::{
             setup, setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, COLL_PRAGMA_KEY,
-            deploy_asset_with_decimals, test_interest_rate_config, LendingTerms
+            deploy_asset_with_decimals, test_interest_rate_config, LendingTerms, Env
         },
         singleton::{ISingletonDispatcherTrait},
         data_model::{AssetParams, LTVParams, LTVConfig, ModifyPositionParams, Amount, AmountType, AmountDenomination},
-        extension::default_extension::{
+        extension::default_extension_po::{
             InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionDispatcherTrait, ShutdownParams,
             FeeParams, LiquidationConfig, ShutdownConfig
         },
@@ -19,7 +19,7 @@ mod TestSingleton {
 
     #[test]
     fn test_pool_id() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -33,14 +33,14 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "extension-is-zero")]
     fn test_create_pool_no_extension() {
-        let (singleton, _, _, _) = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
+        let Env { singleton, .. } = setup_env(Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero());
         singleton.create_pool(array![].span(), array![].span(), Zeroable::zero());
     }
 
     #[test]
     #[should_panic(expected: "asset-config-already-exists")]
     fn test_create_pool_duplicate_asset() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -73,7 +73,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "invalid-ltv-config")]
     fn test_create_pool_assert_ltv_config_invalid_ltv_config() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -126,7 +126,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "scale-exceeded")]
     fn test_create_pool_assert_asset_config_scale_exceeded() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -165,7 +165,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "max-utilization-exceeded")]
     fn test_create_pool_assert_asset_config_max_utilization_exceeded() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -198,7 +198,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "rate-accumulator-too-low")]
     fn test_create_pool_assert_asset_config_rate_accumulator_too_low() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -231,7 +231,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "fee-rate-exceeded")]
     fn test_create_pool_assert_asset_config_fee_rate_exceeded() {
-        let (singleton, extension, config, _) = setup_env(
+        let Env { singleton, extension, config, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -264,7 +264,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "caller-not-extension")]
     fn test_set_asset_config_not_extension() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -289,7 +289,7 @@ mod TestSingleton {
 
     #[test]
     fn test_set_asset_config() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -322,7 +322,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "caller-not-extension")]
     fn test_set_asset_parameter_not_extension() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -333,7 +333,7 @@ mod TestSingleton {
 
     #[test]
     fn test_set_asset_parameter() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -436,7 +436,7 @@ mod TestSingleton {
 
     #[test]
     fn test_set_ltv_config() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
@@ -456,7 +456,7 @@ mod TestSingleton {
     #[test]
     #[should_panic(expected: "caller-not-extension")]
     fn test_set_extension_not_extension() {
-        let (singleton, extension, config, users) = setup_env(
+        let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
