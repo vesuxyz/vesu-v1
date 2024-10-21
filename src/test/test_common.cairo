@@ -2,6 +2,7 @@
 mod TestCommon {
     use alexandria_math::i257::{i257, i257_new, U256IntoI257};
     use snforge_std::{cheatcodes::{start_warp, stop_warp, CheatTarget}};
+    use starknet::get_block_timestamp;
     use vesu::data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination};
     use vesu::{
         units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS, PERCENT},
@@ -216,10 +217,10 @@ mod TestCommon {
     #[test]
     fn test_calculate_fee_shares() {
         let asset_scale = 100_000_000;
-        let asset_config = AssetConfig {
-            total_collateral_shares: SCALE,
-            total_nominal_debt: SCALE,
-            reserve: asset_scale,
+        let mut asset_config = AssetConfig {
+            total_collateral_shares: 100 * SCALE,
+            total_nominal_debt: 100 * SCALE,
+            reserve: 0,
             max_utilization: SCALE,
             floor: 0,
             scale: asset_scale,
@@ -230,11 +231,15 @@ mod TestCommon {
             fee_rate: 10 * PERCENT
         };
         assert!(calculate_fee_shares(asset_config, SCALE) == 0, "Fee shares should be 0");
-        let fee_shares = calculate_fee_shares(asset_config, SCALE + SCALE);
-        assert!(
-            calculate_collateral(fee_shares, asset_config, false) == asset_scale / 10,
-            "Fee shares should be 10% of the reserve"
-        );
+
+        let fee_shares = calculate_fee_shares(asset_config, SCALE + (SCALE * 10 / 100));
+
+        asset_config.total_collateral_shares += fee_shares;
+        asset_config.last_rate_accumulator = SCALE + (SCALE * 10 / 100);
+        asset_config.last_updated = get_block_timestamp();
+        let fee = calculate_collateral(fee_shares, asset_config, false);
+
+        assert!(fee + 1 == asset_scale);
     }
 
     #[test]
