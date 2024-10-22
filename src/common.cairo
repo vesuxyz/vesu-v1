@@ -418,6 +418,7 @@ fn apply_position_update_to_context(
         // to reset the collateral shares conversion rate
         if context.collateral_asset_config.total_collateral_shares <= INFLATION_FEE_SHARES {
             context.collateral_asset_config.total_collateral_shares = 0;
+            context.collateral_asset_config.reserve = 0;
         }
         context.collateral_asset_config.reserve -= collateral_delta.abs;
     }
