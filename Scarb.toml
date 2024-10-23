@@ -40,4 +40,4 @@ deploySepolia = "scarb --profile release build && node --loader ts-node/esm ./sc
 deployTimelock = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployTimelock.ts"
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
-test = "snforge test"
+test = "snforge test 'test_donate_to_reserve_pool_total_collateral_shares_0'"

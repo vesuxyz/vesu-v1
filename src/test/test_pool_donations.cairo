@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod TestPoolDonation {
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, ContractClassTrait, ContractClass, get_class_hash, start_warp
+        start_prank, stop_prank, CheatTarget, ContractClassTrait, ContractClass, get_class_hash, start_warp, store,
+        map_entry_address
     };
     use starknet::get_block_timestamp;
     use vesu::{
@@ -165,6 +166,30 @@ mod TestPoolDonation {
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
         singleton.donate_to_reserve(pool_id, fake_asset.contract_address, amount_to_donate_to_reserve);
+        stop_prank(CheatTarget::One(singleton.contract_address));
+    }
+
+    #[test]
+    #[should_panic(expected: "total-collateral-shares-0")]
+    fn test_donate_to_reserve_pool_total_collateral_shares_0() {
+        let (singleton, _, config, users, _) = setup();
+        let TestConfig { pool_id, debt_asset, debt_scale, .. } = config;
+
+        let amount_to_donate_to_reserve = 2 * debt_scale;
+
+        store(
+            singleton.contract_address,
+            map_entry_address(
+                selector!("asset_configs"), array![pool_id.into(), debt_asset.contract_address.into()].span()
+            ),
+            array![0].span()
+        );
+
+        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        assert!(asset_config.total_collateral_shares == 0, "Total collateral shares should be 0");
+
+        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        singleton.donate_to_reserve(pool_id, debt_asset.contract_address, amount_to_donate_to_reserve);
         stop_prank(CheatTarget::One(singleton.contract_address));
     }
 }
