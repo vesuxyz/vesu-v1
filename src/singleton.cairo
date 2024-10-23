@@ -1656,6 +1656,7 @@ mod Singleton {
         fn donate_to_reserve(ref self: ContractState, pool_id: felt252, asset: ContractAddress, amount: u256) {
             let (mut asset_config, fee_shares) = self.asset_config(pool_id, asset);
             assert_asset_config_exists(asset_config);
+            assert!(asset_config.total_collateral_shares != 0, "total-collateral-shares-0");
             // attribute the accrued fee shares to the pool's extension
             self.attribute_fee_shares(pool_id, self.extensions.read(pool_id), asset, fee_shares);
             // donate amount to the reserve
