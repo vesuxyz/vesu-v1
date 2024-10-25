@@ -75,6 +75,7 @@ mod TestDefaultExtensionCL {
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
@@ -121,6 +122,7 @@ mod TestDefaultExtensionCL {
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
@@ -167,6 +169,7 @@ mod TestDefaultExtensionCL {
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
@@ -213,6 +216,7 @@ mod TestDefaultExtensionCL {
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,

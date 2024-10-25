@@ -443,6 +443,7 @@ mod TestForking {
 
         extension
             .create_pool(
+                'DefaultExtensionPO',
                 asset_params,
                 v_token_params,
                 max_ltv_params,
@@ -719,6 +720,7 @@ mod TestForking {
 
         extension
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_ltv_params,

@@ -73,6 +73,7 @@ trait ITokenizationCallback<TContractState> {
 
 #[starknet::interface]
 trait IDefaultExtension<TContractState> {
+    fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
@@ -106,6 +107,7 @@ trait IDefaultExtension<TContractState> {
     ) -> ContractAddress;
     fn create_pool(
         ref self: TContractState,
+        name: felt252,
         asset_params: Span<AssetParams>,
         v_token_params: Span<VTokenParams>,
         ltv_params: Span<LTVParams>,
@@ -211,6 +213,8 @@ mod DefaultExtensionPO {
         singleton: ContractAddress,
         // tracks the owner for each pool
         owner: LegacyMap::<felt252, ContractAddress>,
+        // tracks the name for each pool
+        pool_names: LegacyMap::<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -333,6 +337,15 @@ mod DefaultExtensionPO {
 
     #[abi(embed_v0)]
     impl DefaultExtensionImpl of IDefaultExtension<ContractState> {
+        /// Returns the name of a pool
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// # Returns
+        /// * `name` - name of the pool
+        fn pool_name(self: @ContractState, pool_id: felt252) -> felt252 {
+            self.pool_names.read(pool_id)
+        }
+
         /// Returns the owner of a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -507,6 +520,7 @@ mod DefaultExtensionPO {
 
         /// Creates a new pool
         /// # Arguments
+        /// * `name` - name of the pool
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
         /// * `ltv_params` - loan-to-value parameters
@@ -519,6 +533,7 @@ mod DefaultExtensionPO {
         /// * `pool_id` - id of the pool
         fn create_pool(
             ref self: ContractState,
+            name: felt252,
             mut asset_params: Span<AssetParams>,
             mut v_token_params: Span<VTokenParams>,
             mut ltv_params: Span<LTVParams>,
@@ -538,6 +553,10 @@ mod DefaultExtensionPO {
             // create the pool in the singleton
             let pool_id = ISingletonDispatcher { contract_address: self.singleton.read() }
                 .create_pool(asset_params, ltv_params, get_contract_address());
+
+            // set the pool name
+            self.pool_names.write(pool_id, name);
+
             // set the pool owner
             self.owner.write(pool_id, owner);
 
