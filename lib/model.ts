@@ -90,6 +90,7 @@ export interface FeeParams {
 }
 
 export interface CreatePoolParams {
+  pool_name: string;
   asset_params: AssetParams[];
   v_token_params: VTokenParams[];
   ltv_params: LTVParams[];
