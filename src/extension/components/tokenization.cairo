@@ -20,9 +20,21 @@ mod tokenization_component {
         v_token_for_collateral_asset: LegacyMap::<(felt252, ContractAddress), ContractAddress>
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct CreateVToken {
+        #[key]
+        v_token: ContractAddress,
+        #[key]
+        pool_id: felt252,
+        #[key]
+        collateral_asset: ContractAddress,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {}
+    enum Event {
+        CreateVToken: CreateVToken,
+    }
 
     #[generate_trait]
     impl TokenizationTrait<
@@ -99,6 +111,8 @@ mod tokenization_component {
 
             ISingletonDispatcher { contract_address: self.get_contract().singleton() }
                 .modify_delegation(pool_id, v_token, true);
+
+            self.emit(CreateVToken { v_token, pool_id, collateral_asset });
         }
 
         /// Mints or burns vTokens for a user for a given collateral asset.
