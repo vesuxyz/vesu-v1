@@ -168,13 +168,18 @@ trait IDefaultExtension<TContractState> {
 
 #[starknet::contract]
 mod DefaultExtensionPO {
-    use alexandria_math::i257::i257;
-    use starknet::{ContractAddress, get_contract_address, get_caller_address, event::EventEmitter};
-    use vesu::extension::components::position_hooks::position_hooks_component::Trait;
+    use alexandria_math::i257::{i257, i257_new};
+    use starknet::{
+        ContractAddress, get_contract_address, get_caller_address, event::EventEmitter, contract_address_const
+    };
     use vesu::{
         map_list::{map_list_component, map_list_component::MapListTrait},
-        data_model::{Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig},
+        data_model::{
+            Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
+            AmountDenomination, AmountType
+        },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
         extension::{
             default_extension_po::{
                 LiquidationParams, ShutdownParams, PragmaOracleParams, ITimestampManagerCallback, IDefaultExtension,
@@ -536,8 +541,8 @@ mod DefaultExtensionPO {
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
-            let pool_id = ISingletonDispatcher { contract_address: self.singleton.read() }
-                .create_pool(asset_params, ltv_params, get_contract_address());
+            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
+            let pool_id = singleton.create_pool(asset_params, ltv_params, get_contract_address());
             // set the pool owner
             self.owner.write(pool_id, owner);
 
@@ -563,6 +568,27 @@ mod DefaultExtensionPO {
 
                     // deploy the vToken for the the collateral asset
                     self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
+
+                    // burn inflation fee
+                    let asset = IERC20Dispatcher { contract_address: asset };
+                    asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
+                    asset.approve(singleton.contract_address, INFLATION_FEE);
+                    singleton
+                        .modify_position(
+                            ModifyPositionParams {
+                                pool_id,
+                                collateral_asset: asset.contract_address,
+                                debt_asset: Zeroable::zero(),
+                                user: contract_address_const::<'ZERO'>(),
+                                collateral: Amount {
+                                    amount_type: AmountType::Delta,
+                                    denomination: AmountDenomination::Assets,
+                                    value: i257_new(INFLATION_FEE, false),
+                                },
+                                debt: Default::default(),
+                                data: ArrayTrait::new().span()
+                            }
+                        );
 
                     i += 1;
                 };
@@ -652,6 +678,28 @@ mod DefaultExtensionPO {
             self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
             ISingletonDispatcher { contract_address: self.singleton.read() }.set_asset_config(pool_id, asset_params);
+
+            // burn inflation fee
+            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
+            let asset = IERC20Dispatcher { contract_address: asset };
+            asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
+            asset.approve(singleton.contract_address, INFLATION_FEE);
+            singleton
+                .modify_position(
+                    ModifyPositionParams {
+                        pool_id,
+                        collateral_asset: asset.contract_address,
+                        debt_asset: Zeroable::zero(),
+                        user: contract_address_const::<'ZERO'>(),
+                        collateral: Amount {
+                            amount_type: AmountType::Delta,
+                            denomination: AmountDenomination::Assets,
+                            value: i257_new(INFLATION_FEE, false),
+                        },
+                        debt: Default::default(),
+                        data: ArrayTrait::new().span()
+                    }
+                );
         }
 
         /// Sets the debt cap for a given asset in a pool

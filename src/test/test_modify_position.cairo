@@ -1221,7 +1221,7 @@ mod TestModifyPosition {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit, "Not transferred to Singleton"); // 2 due to inflation mitigation
+        assert!(balance == liquidity_to_deposit, "Not transferred to Singleton"); // 2 due to inflation mitigation
 
         let (position, collateral, debt) = singleton
             .position(pool_id, debt_asset.contract_address, collateral_asset.contract_address, users.lender);
@@ -1264,21 +1264,21 @@ mod TestModifyPosition {
             "Not transferred from borrower"
         );
         let balance = collateral_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == collateral_to_deposit, "Not transferred to Singleton");
+        assert!(balance == collateral_to_deposit, "Not transferred to Singleton");
 
         // debt asset has been transferred from the singleton to the borrower
         let balance = debt_asset.balance_of(users.borrower);
         assert!(balance == initial_borrower_debt_asset_balance + debt_to_draw, "Debt asset not transferred");
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit - debt_to_draw, "Debt asset not transferred");
+        assert!(balance == liquidity_to_deposit - debt_to_draw, "Debt asset not transferred");
 
         // collateral asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
-        assert!(asset_config.reserve - 2 == collateral_to_deposit, "Collateral not in reserve");
+        assert!(asset_config.reserve == collateral_to_deposit, "Collateral not in reserve");
 
         // debt asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
-        assert!(asset_config.reserve - 2 == liquidity_to_deposit - debt_to_draw, "Debt not taken from reserve");
+        assert!(asset_config.reserve == liquidity_to_deposit - debt_to_draw, "Debt not taken from reserve");
 
         // position's collateral balance has been updated
         let (position, collateral, debt) = singleton
