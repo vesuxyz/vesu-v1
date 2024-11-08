@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestPragmaOracle {
     use core::serde::Serde;
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank};
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
@@ -106,7 +106,7 @@ mod TestPragmaOracle {
         };
         let fee_params = FeeParams { fee_recipient: creator };
 
-        start_prank(CheatTarget::One(extension.contract_address), creator);
+        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 asset_params,

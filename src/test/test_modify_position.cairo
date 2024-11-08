@@ -658,9 +658,7 @@ mod TestModifyPosition {
 
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
-    // fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
-    fn test_fuzz_modify_position_borrow_repay_debt() {
-        let seed: u128 = 49160906480394477896903869124991585048;
+    fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
         let (singleton, _, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
 
@@ -883,7 +881,7 @@ mod TestModifyPosition {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
 
-        let inflation_fee: u256 = 2000; // 2x for each pair
+        let inflation_fee: u256 = 2000_0000000000; // 2x for each pair
 
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
 
@@ -1041,8 +1039,8 @@ mod TestModifyPosition {
             asset_config.total_collateral_shares - inflation_fee == position.collateral_shares, 'Shares not matching'
         );
         // rounding error might leave some extra units in the pool
-        assert(asset_config.reserve == 4, 'Reserve not zero');
-        assert(asset_config.total_collateral_shares == 2000, 'Total shares not zero');
+        assert(asset_config.reserve == 4000, 'Reserve not zero');
+        assert(asset_config.total_collateral_shares == 2000_0000000000, 'Total shares not zero');
 
         stop_prank(CheatTarget::One(singleton.contract_address));
     }
