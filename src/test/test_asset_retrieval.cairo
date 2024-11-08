@@ -49,11 +49,9 @@ mod TestAssetRetrieval {
         let post_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         let post_retrieval_user_balance = debt_asset.balance_of(users.lender);
         assert!(post_retrieval_balance == 0, "Asset not transferred out of the Singleton");
-
-        println!("post_retrieval_user_balance:       {}", post_retrieval_user_balance);
-        println!("initial_lender_debt_asset_balance: {}", initial_lender_debt_asset_balance);
         assert!(
-            post_retrieval_user_balance == initial_lender_debt_asset_balance, "Asset not transferred to the user"
+            post_retrieval_user_balance - pre_deposit_balance == initial_lender_debt_asset_balance,
+            "Asset not transferred to the user"
         );
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
@@ -67,6 +65,9 @@ mod TestAssetRetrieval {
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
+        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
+        let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
+        let pre_deposit_reserve = asset_config.reserve;
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
@@ -89,10 +90,12 @@ mod TestAssetRetrieval {
 
         // check that liquidity has been deposited
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(pre_retrieval_balance == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(pre_retrieval_balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         let (asset_config_pre_retrieval, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
-        assert!(asset_config_pre_retrieval.reserve == liquidity_to_deposit, "Reserve not updated");
+        assert!(
+            asset_config_pre_retrieval.reserve == pre_deposit_reserve + liquidity_to_deposit, "Reserve not updated"
+        );
 
         // retrieve % of total balance 
         let amount_to_retrieve = pre_retrieval_balance / 2;
@@ -108,7 +111,7 @@ mod TestAssetRetrieval {
             "Asset not transferred out of the Singleton"
         );
         assert!(
-            post_retrieval_user_balance == initial_lender_debt_asset_balance - amount_to_retrieve,
+            post_retrieval_user_balance - pre_deposit_balance == initial_lender_debt_asset_balance - amount_to_retrieve,
             "Asset not transferred to the user"
         );
 
@@ -197,6 +200,8 @@ mod TestAssetRetrieval {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
+        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
+
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
             pool_id,
@@ -218,7 +223,7 @@ mod TestAssetRetrieval {
 
         // check that liquidity has been deposited
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(pre_retrieval_balance == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(pre_retrieval_balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         let incorrect_caller = contract_address_const::<'incorrect_caller'>();
 

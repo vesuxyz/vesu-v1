@@ -4,7 +4,8 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp};
 use vesu::{
-    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE}, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
+    singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
     data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams},
     extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
     extension::default_extension_po::{

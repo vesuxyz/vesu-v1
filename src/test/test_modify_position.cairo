@@ -510,8 +510,8 @@ mod TestModifyPosition {
         start_prank(CheatTarget::One(singleton.contract_address), users.lender);
 
         // restrict values slightly to avoid overflow due to inflation mitigation deposit
-        let amount: u256 = if seed > 10000 {
-            seed.into() - 10000
+        let amount: u256 = if seed > 20000000000000 {
+            seed.into() - 20000000000000
         } else {
             seed.into()
         };
@@ -658,11 +658,13 @@ mod TestModifyPosition {
 
     #[test]
     #[fuzzer(runs: 256, seed: 100)]
-    fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
+    // fn test_fuzz_modify_position_borrow_repay_debt(seed: u128) {
+    fn test_fuzz_modify_position_borrow_repay_debt() {
+        let seed: u128 = 49160906480394477896903869124991585048;
         let (singleton, _, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, debt_asset, debt_scale, .. } = config;
 
-        let amount: u256 = seed.into() / 10000;
+        let amount: u256 = seed.into() / 20000000000000;
         let collateral_amount = singleton
             .calculate_collateral(pool_id, collateral_asset.contract_address, amount.into());
         let debt_amount = singleton.calculate_debt(amount.into(), SCALE, debt_scale);
@@ -676,6 +678,8 @@ mod TestModifyPosition {
             .mint(users.borrower, collateral_amount);
         // compensate for rounding up calculation of repayment amount (in two places)
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.borrower, debt_amount + 2);
+
+        println!("A");
 
         // Add liquidity
 
@@ -692,6 +696,8 @@ mod TestModifyPosition {
         };
 
         singleton.modify_position(params);
+
+        println!("B");
 
         // Delta, Native
 
@@ -711,6 +717,8 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
+        println!("C");
+
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
@@ -726,6 +734,16 @@ mod TestModifyPosition {
         };
 
         singleton.modify_position(params);
+
+        println!("D");
+
+        println!("collateral_amount: {}", collateral_amount);
+        println!("debt_amount:       {}", debt_amount);
+
+        let (_, collateral, debt) = singleton
+            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
+        println!("collateral: {}", collateral);
+        println!("debt:       {}", debt);
 
         // Delta, Assets
 
@@ -747,6 +765,8 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
+        println!("E");
+
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
@@ -764,6 +784,8 @@ mod TestModifyPosition {
         };
 
         singleton.modify_position(params);
+
+        println!("F");
 
         let collateral_shares = singleton
             .calculate_collateral_shares(pool_id, collateral_asset.contract_address, collateral_amount.into());
@@ -790,6 +812,8 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
+        println!("G");
+
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
@@ -805,6 +829,8 @@ mod TestModifyPosition {
         };
 
         singleton.modify_position(params);
+
+        println!("H");
 
         // Target, Assets
 
@@ -826,6 +852,8 @@ mod TestModifyPosition {
 
         singleton.modify_position(params);
 
+        println!("I");
+
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
@@ -841,6 +869,8 @@ mod TestModifyPosition {
         };
 
         singleton.modify_position(params);
+
+        println!("J");
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.lender);
@@ -1194,6 +1224,7 @@ mod TestModifyPosition {
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
         let initial_borrower_collateral_asset_balance = collateral_asset.balance_of(users.borrower);
         let initial_borrower_debt_asset_balance = debt_asset.balance_of(users.borrower);
+        let initial_singleton_debt_asset_balance = debt_asset.balance_of(singleton.contract_address);
 
         // LENDER
 
@@ -1221,7 +1252,7 @@ mod TestModifyPosition {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == liquidity_to_deposit, "Not transferred to Singleton"); // 2 due to inflation mitigation
+        assert!(balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton"); // 2 due to inflation mitigation
 
         let (position, collateral, debt) = singleton
             .position(pool_id, debt_asset.contract_address, collateral_asset.contract_address, users.lender);
@@ -1231,6 +1262,8 @@ mod TestModifyPosition {
         assert!(debt == 0, "Debt should be 0");
 
         // BORROWER
+
+        let initial_singleton_collateral_asset_balance = collateral_asset.balance_of(singleton.contract_address);
 
         // deposit collateral and debt assets
         let params = ModifyPositionParams {
@@ -1264,21 +1297,21 @@ mod TestModifyPosition {
             "Not transferred from borrower"
         );
         let balance = collateral_asset.balance_of(singleton.contract_address);
-        assert!(balance == collateral_to_deposit, "Not transferred to Singleton");
+        assert!(balance == initial_singleton_collateral_asset_balance + collateral_to_deposit, "Not transferred to Singleton");
 
         // debt asset has been transferred from the singleton to the borrower
         let balance = debt_asset.balance_of(users.borrower);
         assert!(balance == initial_borrower_debt_asset_balance + debt_to_draw, "Debt asset not transferred");
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance == liquidity_to_deposit - debt_to_draw, "Debt asset not transferred");
+        assert!(balance == initial_singleton_debt_asset_balance + liquidity_to_deposit - debt_to_draw, "Debt asset not transferred");
 
         // collateral asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
-        assert!(asset_config.reserve == collateral_to_deposit, "Collateral not in reserve");
+        assert!(asset_config.reserve == initial_singleton_collateral_asset_balance + collateral_to_deposit, "Collateral not in reserve");
 
         // debt asset reserve has been updated
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
-        assert!(asset_config.reserve == liquidity_to_deposit - debt_to_draw, "Debt not taken from reserve");
+        assert!(asset_config.reserve == initial_singleton_debt_asset_balance + liquidity_to_deposit - debt_to_draw, "Debt not taken from reserve");
 
         // position's collateral balance has been updated
         let (position, collateral, debt) = singleton

@@ -127,8 +127,7 @@ mod DefaultExtensionCL {
             AmountDenomination, AmountType
         },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        units::INFLATION_FEE,
+        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
         extension::{
             default_extension_po::{
                 LiquidationParams, ShutdownParams, ITimestampManagerCallback, FeeParams, VTokenParams,
