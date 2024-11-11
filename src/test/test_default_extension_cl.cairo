@@ -441,8 +441,6 @@ mod TestDefaultExtensionCL {
     // #[test]
     // #[fork("Mainnet", block_number: 693670)]
     // fn test_add_asset_fork() {
-    //     println!("{}", get_block_number());
-
     //     let Env { singleton, extension_v2, config, users, .. } = setup_env(
     //         Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
     //     );

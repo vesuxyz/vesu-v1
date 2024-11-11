@@ -12,7 +12,9 @@ fn to_percent(value: u256) -> u64 {
 
 #[cfg(test)]
 mod TestForking {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan};
+    use snforge_std::{
+        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan
+    };
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp,
         get_block_number
@@ -477,7 +479,6 @@ mod TestForking {
         start_prank(CheatTarget::One(btc.contract_address), creator);
         btc.approve(extension.contract_address, INFLATION_FEE);
         stop_prank(CheatTarget::One(btc.contract_address));
-
 
         let usdc_asset_params: AssetParams = *asset_params[2];
         let usdc = ERC20ABIDispatcher { contract_address: usdc_asset_params.asset };
