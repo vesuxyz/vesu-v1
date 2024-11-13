@@ -30,6 +30,7 @@ export class Deployer extends BaseDeployer {
     await this.waitForTransaction(response.transaction_hash);
     const contracts = { ...protocolContracts, ...envContracts };
     await this.setApprovals(contracts.singleton, contracts.assets);
+    await this.setApprovals(contracts.extension, contracts.assets);
     logAddresses("Deployed:", contracts);
     return Protocol.from(contracts, this);
   }
@@ -105,14 +106,23 @@ export class Deployer extends BaseDeployer {
     return [oracle, [...calls, ...setupCalls]] as const;
   }
 
-  async setApprovals(singleton: Contract, assets: Contract[]) {
+  async setApprovals(contract: Contract, assets: Contract[]) {
     const approvalCalls = assets.map((asset, index) => {
       const { initial_supply } = this.config.env![index].erc20Params();
-      return asset.populateTransaction.approve(singleton.address, initial_supply);
+      return asset.populateTransaction.approve(contract.address, initial_supply);
     });
-    let response = await this.lender.execute(approvalCalls);
+    let response = await this.creator.execute(approvalCalls);
+    await this.waitForTransaction(response.transaction_hash);
+    response = await this.lender.execute(approvalCalls);
     await this.waitForTransaction(response.transaction_hash);
     response = await this.borrower.execute(approvalCalls);
+    await this.waitForTransaction(response.transaction_hash);
+
+    // transfer INFLATION_FEE to creator
+    const transferCalls = assets.map((asset, index) => {
+      return asset.populateTransaction.transfer(this.creator.address, 2000);
+    });
+    response = await this.lender.execute(transferCalls);
     await this.waitForTransaction(response.transaction_hash);
   }
 }
