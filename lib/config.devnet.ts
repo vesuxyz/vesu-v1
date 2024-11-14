@@ -51,6 +51,7 @@ export const config: Config = {
       description: "",
       type: "",
       params: {
+        pool_name: "Genesis Pool",
         asset_params: CONFIG.asset_parameters.map((asset: any) => ({
           asset: "0x0",
           floor: toScale(asset.floor),

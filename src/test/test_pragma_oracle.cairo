@@ -109,6 +109,7 @@ mod TestPragmaOracle {
         start_prank(CheatTarget::One(extension.contract_address), creator);
         extension
             .create_pool(
+                'DefaultExtensionPO',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,

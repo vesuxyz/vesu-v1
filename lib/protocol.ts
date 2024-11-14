@@ -36,6 +36,7 @@ export class Protocol implements ProtocolContracts {
 
     extension.connect(deployer.creator);
     const response = await extension.create_pool(
+      params.pool_name,
       params.asset_params,
       params.v_token_params,
       params.ltv_params,
