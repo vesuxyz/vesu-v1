@@ -349,6 +349,7 @@ fn create_pool(
     prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
+            'DefaultExtensionPO',
             asset_params,
             v_token_params,
             max_position_ltv_params,
@@ -374,6 +375,8 @@ fn create_pool(
     assert!(
         extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zeroable::zero(), "vToken not set"
     );
+
+    assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPO', "pool name not set");
 }
 
 fn create_pool_v2(
@@ -499,6 +502,7 @@ fn create_pool_v2(
     prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
+            'DefaultExtensionCL',
             asset_params,
             v_token_params,
             max_position_ltv_params,
@@ -529,6 +533,8 @@ fn create_pool_v2(
     assert!(
         extension.collateral_asset_for_v_token(config.pool_id_v2, third_v_token) != Zeroable::zero(), "vToken not set"
     );
+
+    assert!(extension.pool_name(config.pool_id_v2) == 'DefaultExtensionCL', "pool name not set");
 }
 
 fn setup_pool(
