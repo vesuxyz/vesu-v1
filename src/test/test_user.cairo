@@ -78,16 +78,6 @@ mod TestUser {
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, user);
 
-        // println!("position.collateral_shares: {}", position.collateral_shares);
-        // println!("position.nominal_debt: {}", position.nominal_debt);
-
-        // let context = singleton.context(pool_id, collateral_asset.contract_address, debt_asset.contract_address, user);
-        // println!(
-        //     "context.collateral_asset_config.total_collateral_shares: {}",
-        //     context.collateral_asset_config.total_collateral_shares
-        // );
-        // println!("context.collateral_asset_config.reserve: {}", context.collateral_asset_config.reserve);
-
         start_prank(CheatTarget::One(singleton.contract_address), user);
         singleton
             .transfer_position(
@@ -115,8 +105,5 @@ mod TestUser {
     // let collateral_shares = singleton.calculate_collateral_shares(
     //     pool_id, wbtc, i257_new(270738, false)
     // );
-
-    // println!("collateral:        {}", 270738);
-    // println!("collateral_shares: {}", collateral_shares);
     }
 }

@@ -25,6 +25,8 @@ mod TestPoolDonation {
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
         stop_prank(CheatTarget::One(singleton.contract_address));
 
+        let initial_singleton_debt_asset_balance = debt_asset.balance_of(singleton.contract_address);
+
         // LENDER
 
         // deposit collateral which is later borrowed by the borrower
@@ -51,7 +53,7 @@ mod TestPoolDonation {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(balance == initial_singleton_debt_asset_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         let (old_position, collateral, _) = singleton
             .position(pool_id, debt_asset.contract_address, collateral_asset.contract_address, users.lender);

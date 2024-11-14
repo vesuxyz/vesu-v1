@@ -72,13 +72,11 @@ mod FlashLoans {
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let flash_loan_receiver_add = deploy_contract("FlashLoanreceiver");
-
         let flashloan_receiver = IFlashloanReceiverDispatcher { contract_address: flash_loan_receiver_add };
-
         let flashloan_receiver_view = IFlashLoanGenericDispatcher { contract_address: flash_loan_receiver_add };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-
+        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             pool_id,
@@ -103,7 +101,7 @@ mod FlashLoans {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         let flash_loan_amount = (balance / 2);
 
@@ -147,13 +145,11 @@ mod FlashLoans {
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let flash_loan_receiver_add = deploy_contract("FlashLoanreceiver");
-
         let flashloan_receiver = IFlashloanReceiverDispatcher { contract_address: flash_loan_receiver_add };
-
         let flashloan_receiver_view = IFlashLoanGenericDispatcher { contract_address: flash_loan_receiver_add };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-
+        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             pool_id,
@@ -178,7 +174,7 @@ mod FlashLoans {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         // entire balance of the pool
         let flash_loan_amount = balance;
@@ -217,13 +213,12 @@ mod FlashLoans {
         let LendingTerms { liquidity_to_deposit, .. } = terms;
 
         let malicious_flash_loan_receiver_add = deploy_contract("MaliciousFlashLoanReceiver");
-
         let malicious_flashloan_receiver = IFlashloanReceiverDispatcher {
             contract_address: malicious_flash_loan_receiver_add
         };
 
         let initial_lender_debt_asset_balance = debt_asset.balance_of(users.lender);
-
+        let pre_deposit_balance = debt_asset.balance_of(singleton.contract_address);
         // deposit debt asset that will be used in flash loan
         let params = ModifyPositionParams {
             pool_id,
@@ -248,7 +243,7 @@ mod FlashLoans {
         assert!(balance == initial_lender_debt_asset_balance - liquidity_to_deposit, "Not transferred from Lender");
 
         let balance = debt_asset.balance_of(singleton.contract_address);
-        assert!(balance - 2 == liquidity_to_deposit, "Not transferred to Singleton");
+        assert!(balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
         // entire balance of the pool
         let flash_loan_amount = balance;

@@ -666,7 +666,9 @@ mod TestShutdown {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: -1000.into(),
+                amount_type: AmountType::Delta,
+                denomination: AmountDenomination::Native,
+                value: -1000_0000000000.into(),
             },
             debt: Default::default(),
             data: ArrayTrait::new().span()
@@ -1013,17 +1015,17 @@ mod TestShutdown {
         };
 
         start_prank(CheatTarget::One(v_token.contract_address), extension.contract_address);
-        IVTokenDispatcher { contract_address: v_token.contract_address }.mint_v_token(users.borrower, 10000000);
+        IVTokenDispatcher { contract_address: v_token.contract_address }.mint_v_token(users.borrower, 1000_0000000000);
         stop_prank(CheatTarget::One(v_token.contract_address));
 
         assert(v_token.max_deposit(Zeroable::zero()) == 0, 'max_deposit neq');
-        assert(v_token.preview_deposit(10000000) == 0, 'preview_deposit neq');
+        assert(v_token.preview_deposit(1000_0000000000) == 0, 'preview_deposit neq');
         assert(v_token.max_mint(Zeroable::zero()) == 0, 'max_mint neq');
-        assert(v_token.preview_mint(100000000) == 0, 'preview_mint neq');
+        assert(v_token.preview_mint(1000_0000000000) == 0, 'preview_mint neq');
         assert(v_token.max_withdraw(users.borrower) > 0, 'max_withdraw neq');
-        assert(v_token.preview_withdraw(10000000) > 0, 'preview_withdraw neq');
+        assert(v_token.preview_withdraw(1000_0000000000) > 0, 'preview_withdraw neq');
         assert(v_token.max_redeem(users.borrower) > 0, 'max_redeem neq');
-        assert(v_token.preview_redeem(10000000) > 0, 'preview_redeem neq');
+        assert(v_token.preview_redeem(1000_0000000000) > 0, 'preview_redeem neq');
 
         let params = ModifyPositionParams {
             pool_id,
@@ -1399,7 +1401,9 @@ mod TestShutdown {
             debt_asset: debt_asset.contract_address,
             user: users.borrower,
             collateral: Amount {
-                amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: -1000.into(),
+                amount_type: AmountType::Delta,
+                denomination: AmountDenomination::Native,
+                value: -1000_0000000000.into(),
             },
             debt: Default::default(),
             data: ArrayTrait::new().span()
@@ -1560,6 +1564,8 @@ mod TestShutdown {
         let status = extension.shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
         assert(status.shutdown_mode == ShutdownMode::Redemption, 'not-in-redemption');
 
+        let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
+
         let params = ModifyPositionParams {
             pool_id,
             collateral_asset: collateral_asset.contract_address,
@@ -1567,8 +1573,8 @@ mod TestShutdown {
             user: borrower,
             collateral: Amount {
                 amount_type: AmountType::Delta,
-                denomination: AmountDenomination::Native,
-                value: -(collateral_to_deposit / 10).into(),
+                denomination: AmountDenomination::Assets,
+                value: -(asset_config.reserve).into(),
             },
             debt: Default::default(),
             data: ArrayTrait::new().span()

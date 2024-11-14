@@ -18,4 +18,4 @@ jobs:
       - name: Patch Scarb.toml
         run: ./scripts/patchScarbToml.sh
 
-      - run: snforge test
+      - run: scarb run test

@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod TestDefaultExtensionPO {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare};
+    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan};
     use starknet::get_contract_address;
     use vesu::{
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
+        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
         test::setup::{setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, Env},
+        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
         singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig},
         extension::default_extension_po::{
             InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionDispatcherTrait, ShutdownParams,
@@ -62,7 +63,7 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -109,7 +110,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -156,7 +161,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -205,7 +214,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -298,7 +311,11 @@ mod TestDefaultExtensionPO {
 
         let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));
@@ -344,14 +361,18 @@ mod TestDefaultExtensionPO {
             pragma_key: Zeroable::zero(), timeout: 1, number_of_sources: 2
         };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 
     #[test]
-    fn test_add_asset() {
+    fn test_add_asset_po() {
         let Env { singleton, extension, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -387,7 +408,11 @@ mod TestDefaultExtensionPO {
 
         let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        asset.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(asset.contract_address));
+
+        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension
             .add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
         stop_prank(CheatTarget::One(extension.contract_address));

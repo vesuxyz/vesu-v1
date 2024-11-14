@@ -9,6 +9,8 @@ const profiler = newProfiler(deployer);
 
 // CREATE POOL
 
+console.log("Create pool");
+
 const [pool, response] = await protocol.createPool("gas-report-pool", { devnetEnv: true });
 await profiler.profile("Create pool", response);
 
@@ -75,9 +77,12 @@ for (const [index, asset] of assets.entries()) {
   );
 
   const { "0": asset_config } = await singleton.asset_config_unsafe(pool.id, asset.address);
-  assert(asset_config.total_collateral_shares === 0n, "total_collateral_shares-neq");
+  assert(
+    asset_config.total_collateral_shares === (2000n * BigInt(1e18)) / BigInt(asset_config.scale),
+    "total_collateral_shares-neq",
+  );
   assert(asset_config.total_nominal_debt === 0n, "total_nominal_debt-neq");
-  assert(asset_config.reserve === 0n, "reserve-neq");
+  assert(asset_config.reserve === 2000n, "reserve-neq");
   assert(asset_config.max_utilization > 0n, "max_utilization-neq");
   assert(asset_config.floor > 0n, "floor-neq");
   assert(asset_config.scale > 0n, "scale-neq");

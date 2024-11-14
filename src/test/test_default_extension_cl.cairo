@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod TestDefaultExtensionCL {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare};
-    use starknet::{get_contract_address, contract_address_const, get_block_number};
+    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan};
+    use starknet::{get_contract_address, contract_address_const, get_block_number, get_caller_address};
     use vesu::{
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
+        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
         test::setup::{setup_env, create_pool, create_pool_v2, TestConfig, deploy_assets, deploy_asset, Env},
-        singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig},
+        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+        singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig, ModifyPositionParams},
         extension::default_extension_po::{
             InterestRateConfig, LiquidationParams, ShutdownParams, FeeParams, VTokenParams, LiquidationConfig,
             ShutdownConfig, FeeConfig
@@ -72,7 +73,7 @@ mod TestDefaultExtensionCL {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .create_pool(
                 'DefaultExtensionCL',
@@ -119,7 +120,11 @@ mod TestDefaultExtensionCL {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .create_pool(
                 'DefaultExtensionCL',
@@ -166,7 +171,11 @@ mod TestDefaultExtensionCL {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .create_pool(
                 'DefaultExtensionCL',
@@ -213,7 +222,11 @@ mod TestDefaultExtensionCL {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .create_pool(
                 'DefaultExtensionCL',
@@ -308,7 +321,11 @@ mod TestDefaultExtensionCL {
 
         let chainlink_oracle_params = ChainlinkOracleParams { aggregator: Zeroable::zero(), timeout: 1 };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .add_asset(
                 config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
@@ -354,7 +371,11 @@ mod TestDefaultExtensionCL {
 
         let chainlink_oracle_params = ChainlinkOracleParams { aggregator: Zeroable::zero(), timeout: 1 };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .add_asset(
                 config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
@@ -363,7 +384,7 @@ mod TestDefaultExtensionCL {
     }
 
     #[test]
-    fn test_add_asset() {
+    fn test_add_asset_cl() {
         let Env { singleton, extension_v2, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -397,11 +418,17 @@ mod TestDefaultExtensionCL {
             target_rate_percent: 20 * PERCENT,
         };
 
+        let chainlink_oracle_config = extension_v2
+            .chainlink_oracle_config(config.pool_id_v2, config.collateral_asset.contract_address);
         let chainlink_oracle_params = ChainlinkOracleParams {
-            aggregator: contract_address_const::<'aggregator'>(), timeout: 1
+            aggregator: chainlink_oracle_config.aggregator, timeout: 1
         };
 
-        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        asset.approve(extension_v2.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(asset.contract_address));
+
+        prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
             .add_asset(
                 config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
@@ -418,8 +445,6 @@ mod TestDefaultExtensionCL {
     // #[test]
     // #[fork("Mainnet", block_number: 693670)]
     // fn test_add_asset_fork() {
-    //     println!("{}", get_block_number());
-
     //     let Env { singleton, extension_v2, config, users, .. } = setup_env(
     //         Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
     //     );

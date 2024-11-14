@@ -12,7 +12,9 @@ fn to_percent(value: u256) -> u64 {
 
 #[cfg(test)]
 mod TestForking {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp};
+    use snforge_std::{
+        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan
+    };
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp,
         get_block_number
@@ -39,7 +41,7 @@ mod TestForking {
             },
             components::position_hooks::LiquidationData
         },
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
+        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
         data_model::{AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice},
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, LiquidatePositionParams},
     };
@@ -438,39 +440,8 @@ mod TestForking {
             )
         };
 
-        let creator = get_caller_address();
-        let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
-
-        extension
-            .create_pool(
-                'DefaultExtensionPO',
-                asset_params,
-                v_token_params,
-                max_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                shutdown_params,
-                FeeParams { fee_recipient: creator },
-                creator
-            );
-
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
-
-        let mut i = 0;
-        loop {
-            match asset_params.get(i) {
-                Option::Some(boxed_asset_params) => {
-                    let mut asset_params = *boxed_asset_params.unbox();
-                    let price = IExtensionDispatcher { contract_address: extension.contract_address }
-                        .price(pool_id, asset_params.asset);
-                    assert!(price.value > 0, "No data");
-                },
-                Option::None(_) => { break; }
-            };
-            i += 1;
-        };
-
+        // get funds
+        let creator = contract_address_const::<'creator'>();
         let supplier = contract_address_const::<'supplier'>();
         let borrower = contract_address_const::<'borrower'>();
         let liquidator = contract_address_const::<'liquidator'>();
@@ -490,7 +461,24 @@ mod TestForking {
             .permissioned_mint(borrower, borrow_amount_eth * 2);
         IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
             .permissioned_mint(liquidator, borrow_amount_eth);
+        IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
         stop_prank(CheatTarget::One(eth_asset_params.asset));
+        start_prank(CheatTarget::One(eth.contract_address), creator);
+        eth.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(eth.contract_address));
+
+        let btc_asset_params: AssetParams = *asset_params[1];
+        let btc = ERC20ABIDispatcher { contract_address: btc_asset_params.asset };
+        let loaded = load(btc_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(btc_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: btc_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(btc_asset_params.asset));
+        start_prank(CheatTarget::One(btc.contract_address), creator);
+        btc.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(btc.contract_address));
 
         let usdc_asset_params: AssetParams = *asset_params[2];
         let usdc = ERC20ABIDispatcher { contract_address: usdc_asset_params.asset };
@@ -501,7 +489,82 @@ mod TestForking {
             .permissioned_mint(supplier, supply_amount_usdc);
         IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
             .permissioned_mint(borrower, borrow_amount_usdc);
+        IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
         stop_prank(CheatTarget::One(usdc_asset_params.asset));
+        start_prank(CheatTarget::One(usdc.contract_address), creator);
+        usdc.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdc.contract_address));
+
+        let usdt_asset_params: AssetParams = *asset_params[3];
+        let usdt = ERC20ABIDispatcher { contract_address: usdt_asset_params.asset };
+        let loaded = load(usdt_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(usdt_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: usdt_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdt_asset_params.asset));
+        start_prank(CheatTarget::One(usdt.contract_address), creator);
+        usdt.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdt.contract_address));
+
+        let strk_asset_params: AssetParams = *asset_params[4];
+        let strk = ERC20ABIDispatcher { contract_address: strk_asset_params.asset };
+        let loaded = load(strk_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(strk_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: strk_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(strk_asset_params.asset));
+        start_prank(CheatTarget::One(strk.contract_address), creator);
+        strk.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(strk.contract_address));
+
+        let wsteth_asset_params: AssetParams = *asset_params[5];
+        let wsteth = ERC20ABIDispatcher { contract_address: wsteth_asset_params.asset };
+        let loaded = load(wsteth_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(wsteth_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: wsteth_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(wsteth_asset_params.asset));
+        start_prank(CheatTarget::One(wsteth.contract_address), creator);
+        wsteth.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(wsteth.contract_address));
+
+        let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
+
+        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+        extension
+            .create_pool(
+                'DefaultExtensionPO',
+                asset_params,
+                v_token_params,
+                max_ltv_params,
+                interest_rate_configs,
+                oracle_params,
+                liquidation_params,
+                shutdown_params,
+                FeeParams { fee_recipient: creator },
+                creator
+            );
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
+
+        let mut i = 0;
+        loop {
+            match asset_params.get(i) {
+                Option::Some(boxed_asset_params) => {
+                    let mut asset_params = *boxed_asset_params.unbox();
+                    let price = IExtensionDispatcher { contract_address: extension.contract_address }
+                        .price(pool_id, asset_params.asset);
+                    assert!(price.value > 0, "No data");
+                },
+                Option::None(_) => { break; }
+            };
+            i += 1;
+        };
 
         SetupParams {
             singleton,
@@ -797,7 +860,7 @@ mod TestForking {
     }
 
     #[test]
-    #[available_gas(2000000)]
+    #[available_gas(3000000)]
     #[fork("Mainnet")]
     fn test_fork_modify_position() {
         let params = setup();
@@ -918,6 +981,7 @@ mod TestForking {
             data: ArrayTrait::new().span()
         };
 
+        // prank(CheatTarget::One(singleton.contract_address), borrower, CheatSpan::TargetCalls(1));
         start_prank(CheatTarget::One(singleton.contract_address), borrower);
         singleton.modify_position(params);
         stop_prank(CheatTarget::One(singleton.contract_address));
