@@ -7,6 +7,7 @@ use vesu::{
         position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair}, fee_model::FeeConfig,
         pragma_oracle::OracleConfig,
     },
+    vendor::pragma::{AggregationMode}
 };
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -19,7 +20,10 @@ struct VTokenParams {
 struct PragmaOracleParams {
     pragma_key: felt252,
     timeout: u64, // [seconds]
-    number_of_sources: u32
+    number_of_sources: u32,
+    start_time: u64, // [seconds]
+    time_window: u64, // [seconds]
+    aggregation_mode: AggregationMode
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -277,10 +281,12 @@ mod DefaultExtensionPO {
         ref self: ContractState,
         singleton: ContractAddress,
         oracle_address: ContractAddress,
+        summary_address: ContractAddress,
         v_token_class_hash: felt252
     ) {
         self.singleton.write(singleton);
         self.pragma_oracle.set_oracle(oracle_address);
+        self.pragma_oracle.set_summary_address(summary_address);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
 
@@ -573,10 +579,22 @@ mod DefaultExtensionPO {
 
                     // set the oracle config
                     let params = *pragma_oracle_params.pop_front().unwrap();
-                    let PragmaOracleParams { pragma_key, timeout, number_of_sources } = params;
+                    let PragmaOracleParams { pragma_key,
+                    timeout,
+                    number_of_sources,
+                    start_time,
+                    time_window,
+                    aggregation_mode } =
+                        params;
                     self
                         .pragma_oracle
-                        .set_oracle_config(pool_id, asset, OracleConfig { pragma_key, timeout, number_of_sources });
+                        .set_oracle_config(
+                            pool_id,
+                            asset,
+                            OracleConfig {
+                                pragma_key, timeout, number_of_sources, start_time, time_window, aggregation_mode
+                            }
+                        );
 
                     // set the interest rate model configuration
                     let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
@@ -682,7 +700,10 @@ mod DefaultExtensionPO {
                     OracleConfig {
                         pragma_key: pragma_oracle_params.pragma_key,
                         timeout: pragma_oracle_params.timeout,
-                        number_of_sources: pragma_oracle_params.number_of_sources
+                        number_of_sources: pragma_oracle_params.number_of_sources,
+                        start_time: pragma_oracle_params.start_time,
+                        time_window: pragma_oracle_params.time_window,
+                        aggregation_mode: pragma_oracle_params.aggregation_mode
                     }
                 );
 

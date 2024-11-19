@@ -19,6 +19,7 @@ mod TestPragmaOracle {
             }
         },
         data_model::{AssetParams, LTVParams}, math::pow_10, common::{is_collateralized},
+        vendor::pragma::{AggregationMode}
     };
 
 
@@ -64,9 +65,21 @@ mod TestPragmaOracle {
         };
 
         let collateral_asset_oracle_params = PragmaOracleParams {
-            pragma_key: COLL_PRAGMA_KEY, timeout, number_of_sources
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout,
+            number_of_sources,
+            start_time: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
-        let debt_asset_oracle_params = PragmaOracleParams { pragma_key: DEBT_PRAGMA_KEY, timeout, number_of_sources };
+        let debt_asset_oracle_params = PragmaOracleParams {
+            pragma_key: DEBT_PRAGMA_KEY,
+            timeout,
+            number_of_sources,
+            start_time: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
         let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };

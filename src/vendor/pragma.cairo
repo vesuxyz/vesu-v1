@@ -1,3 +1,5 @@
+use starknet::ContractAddress;
+
 #[derive(Drop, Copy, Serde)]
 enum DataType {
     SpotEntry: felt252,
@@ -5,8 +7,9 @@ enum DataType {
     GenericEntry: felt252,
 }
 
-#[derive(Serde, Drop, Copy)]
+#[derive(Serde, Drop, Copy, PartialEq, Default, starknet::Store)]
 enum AggregationMode {
+    #[default]
     Median,
     Mean,
     Error,
@@ -25,4 +28,11 @@ struct PragmaPricesResponse {
 trait IPragmaABI<TContractState> {
     fn get_data(self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode) -> PragmaPricesResponse;
     fn get_data_median(self: @TContractState, data_type: DataType) -> PragmaPricesResponse;
+}
+
+#[starknet::interface]
+trait ISummaryStatsABI<TContractState> {
+    fn calculate_twap(
+        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
+    ) -> (u128, u32);
 }

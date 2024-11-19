@@ -10,8 +10,12 @@ export const YEAR_IN_SECONDS = 360 * 24 * 60 * 60;
 
 interface ProtocolConfig {
   singleton: string | undefined;
-  extension: string | undefined;
-  oracle: string | undefined;
+  extensionPO: string | undefined;
+  extensionCL: string | undefined;
+  pragma: {
+    oracle: string | undefined;
+    summary_stats: string | undefined;
+  };
 }
 
 export class EnvAssetParams {

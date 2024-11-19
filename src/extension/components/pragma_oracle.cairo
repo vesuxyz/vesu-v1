@@ -1,21 +1,32 @@
+use vesu::vendor::pragma::AggregationMode;
+
 #[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
 struct OracleConfig {
     pragma_key: felt252,
     timeout: u64, // [seconds]
     number_of_sources: u32, // [0, 255]
+    start_time: u64, // [seconds]
+    time_window: u64, // [seconds]
+    aggregation_mode: AggregationMode
 }
 
 fn assert_oracle_config(oracle_config: OracleConfig) {
     assert!(oracle_config.pragma_key != 0, "pragma-key-must-be-set");
+    assert!(
+        (oracle_config.start_time == 0 && oracle_config.time_window == 0)
+            || (oracle_config.start_time != 0 && oracle_config.time_window != 0),
+        "pragma-start-time-and-time-window-must-be-set-together"
+    );
 }
 
 #[starknet::component]
 mod pragma_oracle_component {
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{
-        units::{SCALE}, math::{pow_10},
+        units::{SCALE, SCALE_128}, math::{pow_10},
         vendor::pragma::{
-            PragmaPricesResponse, DataType, AggregationMode, IPragmaABIDispatcher, IPragmaABIDispatcherTrait
+            PragmaPricesResponse, DataType, AggregationMode, IPragmaABIDispatcher, IPragmaABIDispatcherTrait,
+            ISummaryStatsABIDispatcher, ISummaryStatsABIDispatcherTrait
         },
         extension::components::pragma_oracle::{OracleConfig, assert_oracle_config}
     };
@@ -23,6 +34,7 @@ mod pragma_oracle_component {
     #[storage]
     struct Storage {
         oracle_address: ContractAddress,
+        summary_address: ContractAddress,
         // (pool_id, asset) -> oracle configuration
         oracle_configs: LegacyMap::<(felt252, ContractAddress), OracleConfig>,
     }
@@ -51,6 +63,20 @@ mod pragma_oracle_component {
 
     #[generate_trait]
     impl PragmaOracleTrait<TContractState, +HasComponent<TContractState>> of Trait<TContractState> {
+        /// Sets the address of the summary contract
+        /// # Arguments
+        /// * `summary_address` - address of the summary contract
+        fn set_summary_address(ref self: ComponentState<TContractState>, summary_address: ContractAddress) {
+            self.summary_address.write(summary_address);
+        }
+
+        /// Returns the address of the summary contract
+        /// # Returns
+        /// * `summary_address` - address of the summary contract
+        fn summary_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.summary_address.read()
+        }
+
         /// Sets the address of the pragma oracle contract
         /// # Arguments
         /// * `oracle_address` - address of the pragma oracle contract
@@ -75,12 +101,25 @@ mod pragma_oracle_component {
         /// * `price` - current price of the asset
         /// * `valid` - whether the price is valid
         fn price(self: @ComponentState<TContractState>, pool_id: felt252, asset: ContractAddress) -> (u256, bool) {
-            let OracleConfig { pragma_key, timeout, number_of_sources } = self.oracle_configs.read((pool_id, asset));
+            let OracleConfig { pragma_key, timeout, number_of_sources, start_time, time_window, aggregation_mode } =
+                self
+                .oracle_configs
+                .read((pool_id, asset));
             let dispatcher = IPragmaABIDispatcher { contract_address: self.oracle_address.read() };
-            let response = dispatcher.get_data_median(DataType::SpotEntry(pragma_key));
-            let denominator = pow_10(response.decimals);
-            let price = response.price.into() * SCALE / denominator;
+            let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
 
+            // calculate the twap if start_time and time_window are set
+            let price = if start_time == 0 || time_window == 0 {
+                response.price.into() * SCALE / pow_10(response.decimals.into())
+            } else {
+                let summary = ISummaryStatsABIDispatcher { contract_address: self.summary_address.read() };
+                let (value, decimals) = summary
+                    .calculate_twap(DataType::SpotEntry(pragma_key), aggregation_mode, start_time, time_window,);
+
+                value.into() * SCALE / pow_10(decimals.into())
+            };
+
+            // ensure that price is not stale and that the number of sources is sufficient
             let time_delta = if response.last_updated_timestamp >= get_block_timestamp() {
                 0
             } else {
@@ -89,6 +128,7 @@ mod pragma_oracle_component {
             let valid = (timeout == 0 || (timeout != 0 && time_delta <= timeout))
                 && (number_of_sources == 0
                     || (number_of_sources != 0 && number_of_sources <= response.num_sources_aggregated));
+
             (price, valid)
         }
 
