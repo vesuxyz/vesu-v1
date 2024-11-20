@@ -5,19 +5,19 @@ import { Amount, SCALE, formatRate, setup, toAddress, toI257 } from "../lib";
 
 const deployer = await setup("sepolia");
 const protocol = await deployer.deployEnvAndProtocol();
-const { singleton, assets, extension } = protocol;
+const { singleton, assets, extensionPO } = protocol;
 
 // CREATE POOL
 
 const [pool] = await protocol.createPool("genesis-pool", { devnetEnv: true });
 
-assert(toAddress(await extension.pragma_oracle()) === protocol.oracle.address.toLowerCase(), "pragma_oracle-neq");
-assert(toAddress(await extension.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
+assert(toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(), "pragma_oracle-neq");
+assert(toAddress(await extensionPO.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 assert(
-  toAddress((await extension.fee_config(pool.id)).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
+  toAddress((await extensionPO.fee_config(pool.id)).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
   "fee_recipient-neq",
 );
-const shutdown_config = await extension.shutdown_config(pool.id);
+const shutdown_config = await extensionPO.shutdown_config(pool.id);
 assert(shutdown_config.recovery_period === pool.params.shutdown_params.recovery_period, "recovery_period-neq");
 assert(
   shutdown_config.subscription_period === pool.params.shutdown_params.subscription_period,
@@ -25,7 +25,7 @@ assert(
 );
 
 for (const [index, asset] of assets.entries()) {
-  const oracle_config = await extension.oracle_config(pool.id, asset.address);
+  const oracle_config = await extensionPO.oracle_config(pool.id, asset.address);
   assert(
     shortString.decodeShortString(oracle_config.pragma_key) === pool.params.pragma_oracle_params[index].pragma_key,
     "pragma_key-neq",
@@ -36,7 +36,7 @@ for (const [index, asset] of assets.entries()) {
     "number_of_sources-neq",
   );
 
-  const interest_rate_config = await extension.interest_rate_config(pool.id, asset.address);
+  const interest_rate_config = await extensionPO.interest_rate_config(pool.id, asset.address);
   assert(
     interest_rate_config.min_target_utilization === pool.params.interest_rate_configs[index].min_target_utilization,
     "min_target_utilization-neq",
@@ -85,7 +85,7 @@ for (const [index, asset] of assets.entries()) {
   assert(asset_config.last_full_utilization_rate > 0n, "last_full_utilization_rate-neq");
   assert(asset_config.fee_rate === 0n, "fee_rate-neq");
 
-  assert((await extension.price(pool.id, asset.address)).value > 0n, "price-neq");
+  assert((await extensionPO.price(pool.id, asset.address)).value > 0n, "price-neq");
   assert((await singleton.rate_accumulator_unsafe(pool.id, asset.address)) > 0n, "rate_accumulator-neq");
   assert((await singleton.utilization_unsafe(pool.id, asset.address)) === 0n, "utilization-neq");
 }
@@ -144,9 +144,9 @@ assert(formatRate(supplyAPY) === "2.64%", `Incorrect supply APY: ${formatRate(su
 
 {
   // reduce oracle price
-  const { oracle } = protocol;
-  oracle.connect(deployer);
-  const response = await oracle.set_price("WBTC/USD", 10_000n * SCALE);
+  const { pragma } = protocol;
+  pragma.oracle.connect(deployer);
+  const response = await pragma.oracle.set_price("WBTC/USD", 10_000n * SCALE);
   await deployer.provider.waitForTransaction(response.transaction_hash);
 }
 
@@ -169,16 +169,16 @@ assert(collateralized === false, "Not undercollateralized");
 
 {
   // reset oracle price
-  const { oracle } = protocol;
-  oracle.connect(deployer);
-  const response = await oracle.set_price("WBTC/USD", 40_000n * SCALE);
+  const { pragma } = protocol;
+  pragma.oracle.connect(deployer);
+  const response = await pragma.oracle.set_price("WBTC/USD", 40_000n * SCALE);
   await deployer.provider.waitForTransaction(response.transaction_hash);
 }
 
 const deployment = {
   singleton: protocol.singleton.address,
-  extension: protocol.extension.address,
-  oracle: protocol.oracle.address,
+  extensionPO: protocol.extensionPO.address,
+  oracle: protocol.pragma.oracle.address,
   assets: protocol.assets.map((asset) => asset.address),
   pools: [pool.id.toString()],
 };

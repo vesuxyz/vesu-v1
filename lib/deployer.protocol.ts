@@ -3,6 +3,11 @@ import { unzip } from "lodash-es";
 import { Account, Call, CallData, Contract, RpcProvider } from "starknet";
 import { BaseDeployer, Config, Protocol, logAddresses } from ".";
 
+export interface PragmaConfig {
+  oracle: string | undefined;
+  summary_stats: string | undefined;
+}
+
 export interface PragmaContracts {
   oracle: Contract;
   summary_stats: Contract;
@@ -31,7 +36,11 @@ export class Deployer extends BaseDeployer {
   async deployEnvAndProtocol(): Promise<Protocol> {
     assert(this.config.env, "Test environment not defined, use loadProtocol for existing networks");
     const [envContracts, envCalls] = await this.deferEnv();
-    const [protocolContracts, protocolCalls] = await this.deferProtocol(envContracts.pragma);
+    const pragma = {
+      oracle: envContracts.pragma.oracle.address,
+      summary_stats: envContracts.pragma.summary_stats.address,
+    };
+    const [protocolContracts, protocolCalls] = await this.deferProtocol(pragma);
     let response = await this.execute([...envCalls, ...protocolCalls]);
     await this.waitForTransaction(response.transaction_hash);
     const contracts = { ...protocolContracts, ...envContracts };
@@ -61,20 +70,20 @@ export class Deployer extends BaseDeployer {
     return Protocol.from(contracts, this);
   }
 
-  async deployProtocol(pragma: PragmaContracts) {
+  async deployProtocol(pragma: PragmaConfig) {
     const [contracts, calls] = await this.deferProtocol(pragma);
     const response = await this.execute([...calls]);
     await this.waitForTransaction(response.transaction_hash);
     return [contracts, response] as const;
   }
 
-  async deferProtocol(pragma: PragmaContracts) {
+  async deferProtocol(pragma: PragmaConfig) {
     const [singleton, calls1] = await this.deferContract("Singleton");
     const v_token_class_hash = await this.declareCached("VToken");
     const calldataPO = CallData.compile({
       singleton: singleton.address,
-      oracle_address: pragma.oracle.address,
-      summary_stats_address: pragma.summary_stats.address,
+      oracle_address: pragma.oracle!,
+      summary_stats_address: pragma.summary_stats!,
       v_token_class_hash: v_token_class_hash,
     });
     const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);
@@ -120,7 +129,7 @@ export class Deployer extends BaseDeployer {
 
   async deferPragmaOracle() {
     const [oracle, oracleCalls] = await this.deferContract("MockPragmaOracle");
-    const [summary_stats, summaryStatsCalls] = await this.deferContract("MockSummaryStats");
+    const [summary_stats, summaryStatsCalls] = await this.deferContract("MockPragmaSummary");
     const setupCalls = this.config.env!.map(({ pragmaKey, price }) =>
       oracle.populateTransaction.set_price(pragmaKey, price),
     );
