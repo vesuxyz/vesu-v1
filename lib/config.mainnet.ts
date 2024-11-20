@@ -1,5 +1,5 @@
-import { CairoCustomEnum } from "starknet";
 import fs from "fs";
+import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
 

@@ -11,10 +11,14 @@ const { singleton, assets, extensionPO } = protocol;
 
 const [pool] = await protocol.createPool("genesis-pool", { devnetEnv: true });
 
-assert(toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(), "pragma_oracle-neq");
+assert(
+  toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
+  "pragma_oracle-neq",
+);
 assert(toAddress(await extensionPO.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 assert(
-  toAddress((await extensionPO.fee_config(pool.id)).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
+  toAddress((await extensionPO.fee_config(pool.id)).fee_recipient) ===
+    pool.params.fee_params.fee_recipient.toLowerCase(),
   "fee_recipient-neq",
 );
 const shutdown_config = await extensionPO.shutdown_config(pool.id);

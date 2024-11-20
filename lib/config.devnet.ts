@@ -47,7 +47,7 @@ export const config: Config = {
     pragma: {
       oracle: "0x0",
       summary_stats: "0x0",
-    }
+    },
   },
   env,
   pools: {

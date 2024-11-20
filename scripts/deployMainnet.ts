@@ -16,7 +16,10 @@ const { singleton, assets, extensionPO } = protocol;
 const [pool] = await protocol.createPool("genesis-pool");
 console.log("Pool ID: ", pool.id.toString());
 
-assert(toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(), "pragma_oracle-neq");
+assert(
+  toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
+  "pragma_oracle-neq",
+);
 // assert(toAddress(await extension.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 // assert(
 //   toAddress((await extension.fee_config(pool.id)).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),

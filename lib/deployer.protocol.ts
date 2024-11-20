@@ -89,7 +89,7 @@ export class Deployer extends BaseDeployer {
     const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);
     const calldataCL = CallData.compile({
       singleton: singleton.address,
-      v_token_class_hash: v_token_class_hash
+      v_token_class_hash: v_token_class_hash,
     });
     const [extensionCL, calls3] = await this.deferContract("DefaultExtensionCL", calldataCL);
     return [{ singleton, extensionPO, extensionCL }, [...calls1, ...calls2, ...calls3]] as const;
@@ -105,10 +105,7 @@ export class Deployer extends BaseDeployer {
   async deferEnv() {
     const [assets, assetCalls] = await this.deferMockAssets(this.lender.address);
     const [oracle, summary_stats, pragmaCalls] = await this.deferPragmaOracle();
-    return [
-      { assets, pragma: { oracle, summary_stats } },
-      [...assetCalls, ...pragmaCalls]
-    ] as const;
+    return [{ assets, pragma: { oracle, summary_stats } }, [...assetCalls, ...pragmaCalls]] as const;
   }
 
   async deferMockAssets(recipient: string) {
