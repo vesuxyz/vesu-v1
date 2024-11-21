@@ -7,8 +7,12 @@ const protocol = await deployer.deployEnvAndProtocol();
 
 const deployment = {
   singleton: protocol.singleton.address,
-  extension: protocol.extension.address,
-  oracle: protocol.oracle.address,
+  extensionPO: protocol.extensionPO.address,
+  extensionCL: protocol.extensionCL.address,
+  pragma: {
+    oracle: protocol.pragma.oracle.address,
+    summary_stats: protocol.pragma.summary_stats.address,
+  },
   assets: protocol.assets.map((asset) => asset.address),
   pools: [],
 };

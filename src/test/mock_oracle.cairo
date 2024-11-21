@@ -1,7 +1,48 @@
-use vesu::vendor::pragma::{PragmaPricesResponse, DataType};
+use vesu::vendor::pragma::{PragmaPricesResponse, DataType, AggregationMode};
+
+#[starknet::interface]
+trait IMockPragmaSummary<TContractState> {
+    fn calculate_twap(
+        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
+    ) -> (u128, u32);
+    fn set_twap(ref self: TContractState, key: felt252, twap: u128, decimals: u32);
+}
+
+#[starknet::contract]
+mod MockPragmaSummary {
+    use starknet::{get_block_timestamp, get_caller_address};
+    use vesu::{vendor::pragma::{DataType, AggregationMode}, test::mock_oracle::IMockPragmaSummary};
+
+    #[storage]
+    struct Storage {
+        twaps: LegacyMap::<felt252, u128>,
+        decimals: u32,
+    }
+
+    #[abi(embed_v0)]
+    impl MockPragmaSummaryImpl of IMockPragmaSummary<ContractState> {
+        fn calculate_twap(
+            self: @ContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64
+        ) -> (u128, u32) {
+            match data_type {
+                DataType::SpotEntry(key) => { (self.twaps.read(key), self.decimals.read()) },
+                DataType::FutureEntry => { (0, 0) },
+                DataType::GenericEntry => { (0, 0) }
+            }
+        }
+
+        fn set_twap(ref self: ContractState, key: felt252, twap: u128, decimals: u32) {
+            self.twaps.write(key, twap);
+            self.decimals.write(decimals);
+        }
+    }
+}
 
 #[starknet::interface]
 trait IMockPragmaOracle<TContractState> {
+    fn get_data(
+        ref self: TContractState, data_type: DataType, aggregation_mode: AggregationMode
+    ) -> PragmaPricesResponse;
     fn get_data_median(ref self: TContractState, data_type: DataType) -> PragmaPricesResponse;
     fn get_num_sources_aggregated(ref self: TContractState, key: felt252) -> u32;
     fn get_last_updated_timestamp(ref self: TContractState, key: felt252) -> u64;
@@ -13,7 +54,7 @@ trait IMockPragmaOracle<TContractState> {
 #[starknet::contract]
 mod MockPragmaOracle {
     use starknet::{get_block_timestamp, get_caller_address};
-    use vesu::{vendor::pragma::{PragmaPricesResponse, DataType}, test::mock_oracle::IMockPragmaOracle};
+    use vesu::{vendor::pragma::{PragmaPricesResponse, DataType, AggregationMode}, test::mock_oracle::IMockPragmaOracle};
 
     #[derive(Copy, Drop, Serde)]
     struct BaseEntry {
@@ -66,6 +107,12 @@ mod MockPragmaOracle {
             } else {
                 last_updated_timestamp
             }
+        }
+
+        fn get_data(
+            ref self: ContractState, data_type: DataType, aggregation_mode: AggregationMode
+        ) -> PragmaPricesResponse {
+            self.get_data_median(data_type)
         }
 
         fn get_data_median(ref self: ContractState, data_type: DataType) -> PragmaPricesResponse {

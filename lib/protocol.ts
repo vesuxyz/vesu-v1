@@ -1,19 +1,20 @@
 import assert from "assert";
 import { Contract } from "starknet";
-import { CreatePoolParams, Deployer, Pool, ProtocolContracts } from ".";
+import { CreatePoolParams, Deployer, Pool, PragmaContracts, ProtocolContracts } from ".";
 
 export class Protocol implements ProtocolContracts {
   constructor(
     public singleton: Contract,
-    public extension: Contract,
-    public oracle: Contract,
+    public extensionPO: Contract,
+    public extensionCL: Contract,
+    public pragma: PragmaContracts,
     public assets: Contract[],
     public deployer: Deployer,
   ) {}
 
   static from(contracts: ProtocolContracts, deployer: Deployer) {
-    const { singleton, extension, oracle, assets } = contracts;
-    return new Protocol(singleton, extension, oracle, assets, deployer);
+    const { singleton, extensionPO, extensionCL, pragma, assets } = contracts;
+    return new Protocol(singleton, extensionPO, extensionCL, pragma, assets, deployer);
   }
 
   async createPool(name: string, { devnetEnv = false, printParams = false } = {}) {
@@ -29,13 +30,13 @@ export class Protocol implements ProtocolContracts {
   }
 
   async createPoolFromParams(params: CreatePoolParams) {
-    const { singleton, extension, deployer } = this;
-    const nonce = await singleton.creator_nonce(extension.address);
-    const poolId = await singleton.calculate_pool_id(extension.address, nonce + 1n);
+    const { singleton, extensionPO, deployer } = this;
+    const nonce = await singleton.creator_nonce(extensionPO.address);
+    const poolId = await singleton.calculate_pool_id(extensionPO.address, nonce + 1n);
     assert((await singleton.extension(poolId)) === 0n, "extension should be set");
 
-    extension.connect(deployer.creator);
-    const response = await extension.create_pool(
+    extensionPO.connect(deployer.creator);
+    const response = await extensionPO.create_pool(
       params.pool_name,
       params.asset_params,
       params.v_token_params,

@@ -7,6 +7,7 @@ use vesu::{
         position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair}, fee_model::FeeConfig,
         pragma_oracle::OracleConfig,
     },
+    vendor::pragma::{AggregationMode}
 };
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -19,7 +20,10 @@ struct VTokenParams {
 struct PragmaOracleParams {
     pragma_key: felt252,
     timeout: u64, // [seconds]
-    number_of_sources: u32
+    number_of_sources: u32,
+    start_time_offset: u64, // [seconds]
+    time_window: u64, // [seconds]
+    aggregation_mode: AggregationMode
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -76,6 +80,7 @@ trait IDefaultExtension<TContractState> {
     fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
+    fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
     fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
@@ -277,10 +282,12 @@ mod DefaultExtensionPO {
         ref self: ContractState,
         singleton: ContractAddress,
         oracle_address: ContractAddress,
+        summary_address: ContractAddress,
         v_token_class_hash: felt252
     ) {
         self.singleton.write(singleton);
         self.pragma_oracle.set_oracle(oracle_address);
+        self.pragma_oracle.set_summary_address(summary_address);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
 
@@ -365,6 +372,13 @@ mod DefaultExtensionPO {
         /// * `oracle_address` - address of the pragma oracle contract
         fn pragma_oracle(self: @ContractState) -> ContractAddress {
             self.pragma_oracle.oracle_address()
+        }
+
+        /// Returns the address of the pragma summary contract
+        /// # Returns
+        /// * `summary_address` - address of the pragma summary contract
+        fn pragma_summary(self: @ContractState) -> ContractAddress {
+            self.pragma_oracle.summary_address()
         }
 
         /// Returns the oracle configuration for a given pool and asset
@@ -573,10 +587,22 @@ mod DefaultExtensionPO {
 
                     // set the oracle config
                     let params = *pragma_oracle_params.pop_front().unwrap();
-                    let PragmaOracleParams { pragma_key, timeout, number_of_sources } = params;
+                    let PragmaOracleParams { pragma_key,
+                    timeout,
+                    number_of_sources,
+                    start_time_offset,
+                    time_window,
+                    aggregation_mode } =
+                        params;
                     self
                         .pragma_oracle
-                        .set_oracle_config(pool_id, asset, OracleConfig { pragma_key, timeout, number_of_sources });
+                        .set_oracle_config(
+                            pool_id,
+                            asset,
+                            OracleConfig {
+                                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode
+                            }
+                        );
 
                     // set the interest rate model configuration
                     let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
@@ -682,7 +708,10 @@ mod DefaultExtensionPO {
                     OracleConfig {
                         pragma_key: pragma_oracle_params.pragma_key,
                         timeout: pragma_oracle_params.timeout,
-                        number_of_sources: pragma_oracle_params.number_of_sources
+                        number_of_sources: pragma_oracle_params.number_of_sources,
+                        start_time_offset: pragma_oracle_params.start_time_offset,
+                        time_window: pragma_oracle_params.time_window,
+                        aggregation_mode: pragma_oracle_params.aggregation_mode
                     }
                 );
 

@@ -5,7 +5,7 @@ mod TestDefaultExtensionPO {
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
         test::setup::{setup_env, create_pool, TestConfig, deploy_assets, deploy_asset, Env},
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
+        vendor::{erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, pragma::{AggregationMode}},
         singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig},
         extension::default_extension_po::{
             InterestRateConfig, PragmaOracleParams, LiquidationParams, IDefaultExtensionDispatcherTrait, ShutdownParams,
@@ -200,7 +200,12 @@ mod TestDefaultExtensionPO {
         };
 
         let collateral_asset_oracle_params = PragmaOracleParams {
-            pragma_key: COLL_PRAGMA_KEY, timeout: 0, number_of_sources: 2
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout: 0,
+            number_of_sources: 2,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
 
         let asset_params = array![collateral_asset_params].span();
@@ -271,7 +276,14 @@ mod TestDefaultExtensionPO {
             target_rate_percent: 20 * PERCENT,
         };
 
-        let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
+        let pragma_oracle_params = PragmaOracleParams {
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout: 1,
+            number_of_sources: 2,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         extension
             .add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params, 0);
@@ -309,7 +321,14 @@ mod TestDefaultExtensionPO {
             target_rate_percent: 20 * PERCENT,
         };
 
-        let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
+        let pragma_oracle_params = PragmaOracleParams {
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout: 1,
+            number_of_sources: 2,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
         config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
@@ -358,7 +377,12 @@ mod TestDefaultExtensionPO {
         };
 
         let pragma_oracle_params = PragmaOracleParams {
-            pragma_key: Zeroable::zero(), timeout: 1, number_of_sources: 2
+            pragma_key: Zeroable::zero(),
+            timeout: 1,
+            number_of_sources: 2,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
 
         start_prank(CheatTarget::One(asset.contract_address), users.creator);
@@ -406,7 +430,14 @@ mod TestDefaultExtensionPO {
             target_rate_percent: 20 * PERCENT,
         };
 
-        let pragma_oracle_params = PragmaOracleParams { pragma_key: COLL_PRAGMA_KEY, timeout: 1, number_of_sources: 2 };
+        let pragma_oracle_params = PragmaOracleParams {
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout: 1,
+            number_of_sources: 2,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         start_prank(CheatTarget::One(asset.contract_address), users.creator);
         asset.approve(extension.contract_address, INFLATION_FEE);

@@ -1,4 +1,5 @@
 import fs from "fs";
+import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
 
@@ -33,7 +34,7 @@ const env = CONFIG.asset_parameters.map(
       asset.token.symbol,
       BigInt(asset.token.decimals),
       toScale(10000),
-      asset.oracle.pragma_key,
+      asset.pragma.pragma_key,
       price(asset.token.symbol),
       asset.token.is_legacy,
       BigInt(asset.fee_rate),
@@ -47,8 +48,12 @@ export const config: Config = {
   name: "sepolia",
   protocol: {
     singleton: DEPLOYMENT.singleton || "0x0",
-    extension: DEPLOYMENT.extension || "0x0",
-    oracle: DEPLOYMENT.oracle || "0x0",
+    extensionPO: DEPLOYMENT.extensionPO || "0x0",
+    extensionCL: DEPLOYMENT.extensionCL || "0x0",
+    pragma: {
+      oracle: DEPLOYMENT.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
+      summary_stats: DEPLOYMENT.summary_stats || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
+    },
   },
   env,
   pools: {
@@ -91,9 +96,12 @@ export const config: Config = {
           target_rate_percent: toScale(asset.target_rate_percent),
         })),
         pragma_oracle_params: CONFIG.asset_parameters.map((asset: any) => ({
-          pragma_key: asset.oracle.pragma_key,
-          timeout: 0n, // BigInt(asset.oracle.timeout),
-          number_of_sources: 0n, // BigInt(asset.oracle.number_of_sources),
+          pragma_key: asset.pragma.pragma_key,
+          timeout: 0n, // BigInt(asset.pragma.timeout),
+          number_of_sources: 0n, // BigInt(asset.pragma.number_of_sources),
+          start_time_offset: 0n, // BigInt(asset.pragma.start_time_offset),
+          time_window: 0n, // BigInt(asset.pragma.time_window),
+          aggregation_mode: new CairoCustomEnum({ Median: {} }), // new CairoCustomEnum({ [(asset.pragma.aggregation_mode == 0) ? "Median" : "Error"]: {} })
         })),
         liquidation_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(

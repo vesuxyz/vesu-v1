@@ -28,7 +28,8 @@ mod TestForking {
         },
         vendor::{
             erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
-            chainlink::{IChainlinkAggregatorDispatcher, IChainlinkAggregatorDispatcherTrait, Round}
+            chainlink::{IChainlinkAggregatorDispatcher, IChainlinkAggregatorDispatcherTrait, Round},
+            pragma::{AggregationMode}
         },
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
@@ -193,6 +194,9 @@ mod TestForking {
         let pragma_oracle_address = contract_address_const::<
             0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b
         >();
+        let summary_stats_address = contract_address_const::<
+            0x049eefafae944d07744d07cc72a5bf14728a6fb463c3eae5bca13552f5d455fd
+        >();
 
         let eth_asset_params = AssetParams {
             asset: contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
@@ -204,7 +208,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let eth_asset_oracle_params = PragmaOracleParams { pragma_key: 'ETH/USD', timeout: 0, number_of_sources: 0 };
+        let eth_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'ETH/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let eth_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Ethereum', v_token_symbol: 'vETH' };
 
@@ -218,7 +229,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let wbtc_asset_oracle_params = PragmaOracleParams { pragma_key: 'WBTC/USD', timeout: 0, number_of_sources: 0 };
+        let wbtc_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'WBTC/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let wbtc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Wrapped Bitcoin', v_token_symbol: 'vWBTC' };
 
@@ -232,7 +250,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let usdc_asset_oracle_params = PragmaOracleParams { pragma_key: 'USDC/USD', timeout: 0, number_of_sources: 2 };
+        let usdc_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'USDC/USD',
+            timeout: 0,
+            number_of_sources: 2,
+            start_time_offset: 86400 * 7,
+            time_window: 86400 * 6,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let usdc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu USD Coin', v_token_symbol: 'vUSDC' };
 
@@ -246,7 +271,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let usdt_asset_oracle_params = PragmaOracleParams { pragma_key: 'USDT/USD', timeout: 0, number_of_sources: 0 };
+        let usdt_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'USDT/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let usdt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Tether', v_token_symbol: 'vUSDT' };
 
@@ -261,7 +293,12 @@ mod TestForking {
         };
 
         let wsteth_asset_oracle_params = PragmaOracleParams {
-            pragma_key: 'WSTETH/USD', timeout: 0, number_of_sources: 0
+            pragma_key: 'WSTETH/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
 
         let wsteth_asset_v_token_params = VTokenParams {
@@ -278,7 +315,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let strk_asset_oracle_params = PragmaOracleParams { pragma_key: 'STRK/USD', timeout: 0, number_of_sources: 0 };
+        let strk_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'STRK/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let strk_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Starknet', v_token_symbol: 'vSTRK' };
 
@@ -436,7 +480,12 @@ mod TestForking {
         let extension = IDefaultExtensionDispatcher {
             contract_address: deploy_with_args(
                 "DefaultExtensionPO",
-                array![singleton.contract_address.into(), pragma_oracle_address.into(), v_token_class_hash.into()]
+                array![
+                    singleton.contract_address.into(),
+                    pragma_oracle_address.into(),
+                    summary_stats_address.into(),
+                    v_token_class_hash.into()
+                ]
             )
         };
 
@@ -550,8 +599,6 @@ mod TestForking {
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
-
         let mut i = 0;
         loop {
             match asset_params.get(i) {
@@ -565,6 +612,14 @@ mod TestForking {
             };
             i += 1;
         };
+
+        store(
+            extension.contract_address,
+            map_entry_address(selector!("oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),),
+            array!['USDC/USD', 0, 2, 0, 0, 1].span()
+        );
+
+        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         SetupParams {
             singleton,

@@ -5,23 +5,27 @@ import { setup, toAddress } from "../lib";
 
 const deployer = await setup("mainnet");
 
-const [contracts] = await deployer.deployProtocol(deployer.config.protocol.oracle!);
+const [contracts] = await deployer.deployProtocol(deployer.config.protocol.pragma);
 deployer.config.protocol.singleton = contracts.singleton.address;
-deployer.config.protocol.extension = contracts.extension.address;
+deployer.config.protocol.extensionPO = contracts.extensionPO.address;
+deployer.config.protocol.extensionCL = contracts.extensionCL.address;
 
 const protocol = await deployer.loadProtocol();
-const { singleton, assets, extension } = protocol;
+const { singleton, assets, extensionPO } = protocol;
 
 const [pool] = await protocol.createPool("genesis-pool");
 console.log("Pool ID: ", pool.id.toString());
 
-assert(toAddress(await extension.pragma_oracle()) === protocol.oracle.address.toLowerCase(), "pragma_oracle-neq");
+assert(
+  toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
+  "pragma_oracle-neq",
+);
 // assert(toAddress(await extension.pool_owner(pool.id)) === pool.params.owner.toLowerCase(), "pool_owner-neq");
 // assert(
 //   toAddress((await extension.fee_config(pool.id)).fee_recipient) === pool.params.fee_params.fee_recipient.toLowerCase(),
 //   "fee_recipient-neq",
 // );
-const shutdown_config = await extension.shutdown_config(pool.id);
+const shutdown_config = await extensionPO.shutdown_config(pool.id);
 assert(shutdown_config.recovery_period === pool.params.shutdown_params.recovery_period, "recovery_period-neq");
 assert(
   shutdown_config.subscription_period === pool.params.shutdown_params.subscription_period,
@@ -29,7 +33,7 @@ assert(
 );
 
 for (const [index, asset] of assets.entries()) {
-  const oracle_config = await extension.oracle_config(pool.id, asset.address);
+  const oracle_config = await extensionPO.oracle_config(pool.id, asset.address);
   assert(
     shortString.decodeShortString(oracle_config.pragma_key) === pool.params.pragma_oracle_params[index].pragma_key,
     "pragma_key-neq",
@@ -40,7 +44,7 @@ for (const [index, asset] of assets.entries()) {
     "number_of_sources-neq",
   );
 
-  const interest_rate_config = await extension.interest_rate_config(pool.id, asset.address);
+  const interest_rate_config = await extensionPO.interest_rate_config(pool.id, asset.address);
   assert(
     interest_rate_config.min_target_utilization === pool.params.interest_rate_configs[index].min_target_utilization,
     "min_target_utilization-neq",
@@ -89,15 +93,16 @@ for (const [index, asset] of assets.entries()) {
   assert(asset_config.last_full_utilization_rate > 0n, "last_full_utilization_rate-neq");
   assert(asset_config.fee_rate === 0n, "fee_rate-neq");
 
-  assert((await extension.price(pool.id, asset.address)).value > 0n, "price-neq");
+  assert((await extensionPO.price(pool.id, asset.address)).value > 0n, "price-neq");
   assert((await singleton.rate_accumulator_unsafe(pool.id, asset.address)) > 0n, "rate_accumulator-neq");
   assert((await singleton.utilization_unsafe(pool.id, asset.address)) === 0n, "utilization-neq");
 }
 
 const deployment = {
   singleton: protocol.singleton.address,
-  extension: protocol.extension.address,
-  oracle: protocol.oracle.address,
+  extensionPO: protocol.extensionPO.address,
+  extensionCL: protocol.extensionCL.address,
+  oracle: protocol.pragma.oracle.address,
   assets: protocol.assets.map((asset) => asset.address),
   pools: [pool.id.toString()],
 };

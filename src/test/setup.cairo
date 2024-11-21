@@ -16,8 +16,11 @@ use vesu::{
         IDefaultExtensionCLDispatcher, IDefaultExtensionCLDispatcherTrait, ChainlinkOracleParams
     },
     vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
-    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait},
-    test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
+    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode},
+    test::mock_oracle::{
+        IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+        IMockPragmaSummaryDispatcherTrait
+    },
     test::mock_chainlink_aggregator::{IMockChainlinkAggregatorDispatcher, IMockChainlinkAggregatorDispatcherTrait}
 };
 
@@ -134,10 +137,15 @@ fn setup_env(
         }
     };
 
+    let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
+
     let v_token_class_hash = declare("VToken").class_hash;
 
     let args = array![
-        singleton.contract_address.into(), mock_pragma_oracle.contract_address.into(), v_token_class_hash.into()
+        singleton.contract_address.into(),
+        mock_pragma_oracle.contract_address.into(),
+        mock_pragma_summary.contract_address.into(),
+        v_token_class_hash.into()
     ];
     let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtensionPO", args) };
 
@@ -273,11 +281,28 @@ fn create_pool(
     };
 
     let collateral_asset_oracle_params = PragmaOracleParams {
-        pragma_key: COLL_PRAGMA_KEY, timeout: 0, number_of_sources: 2
+        pragma_key: COLL_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
     };
-    let debt_asset_oracle_params = PragmaOracleParams { pragma_key: DEBT_PRAGMA_KEY, timeout: 0, number_of_sources: 2 };
+    let debt_asset_oracle_params = PragmaOracleParams {
+        pragma_key: DEBT_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
+    };
     let third_asset_oracle_params = PragmaOracleParams {
-        pragma_key: THIRD_PRAGMA_KEY, timeout: 0, number_of_sources: 2
+        pragma_key: THIRD_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
     };
 
     let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
