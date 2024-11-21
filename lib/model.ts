@@ -65,6 +65,10 @@ export interface LTVParams extends AssetIndexes {
   max_ltv: bigint;
 }
 
+export interface DebtCapParams extends AssetIndexes {
+  debt_cap: bigint;
+}
+
 export interface AssetConfig {
   total_collateral_shares: bigint;
   total_nominal_debt: bigint;
@@ -97,6 +101,7 @@ export interface CreatePoolParams {
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];
   liquidation_params: LiquidationParams[];
+  debt_caps_params: DebtCapParams[];
   shutdown_params: ShutdownParams;
   fee_params: FeeParams;
   owner: string;

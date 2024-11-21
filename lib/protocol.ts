@@ -44,6 +44,7 @@ export class Protocol implements ProtocolContracts {
       params.interest_rate_configs,
       params.pragma_oracle_params,
       params.liquidation_params,
+      params.debt_caps_params,
       params.shutdown_params,
       params.fee_params,
       params.owner,

@@ -7,7 +7,7 @@ mod TestPragmaOracle {
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
+        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, DebtCapParams},
         singleton::{ISingletonDispatcherTrait, ISingletonDispatcher},
         test::{
             setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
@@ -106,6 +106,11 @@ mod TestPragmaOracle {
             collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0
         };
 
+        let collateral_asset_debt_cap_params = DebtCapParams {
+            collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0
+        };
+        let debt_asset_debt_cap_params = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+
         let shutdown_ltv_params_0 = LTVParams {
             collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
         };
@@ -121,6 +126,7 @@ mod TestPragmaOracle {
         let models = array![interest_rate_config, interest_rate_config].span();
         let oracle_params = array![collateral_asset_oracle_params, debt_asset_oracle_params].span();
         let liquidation_params = array![collateral_asset_liquidation_params, debt_asset_liquidation_params].span();
+        let debt_caps = array![collateral_asset_debt_cap_params, debt_asset_debt_cap_params].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
@@ -136,6 +142,7 @@ mod TestPragmaOracle {
                 models,
                 oracle_params,
                 liquidation_params,
+                debt_caps,
                 shutdown_params,
                 fee_params,
                 creator

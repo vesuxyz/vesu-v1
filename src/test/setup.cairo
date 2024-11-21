@@ -6,7 +6,7 @@ use starknet::{ContractAddress, contract_address_const, get_block_timestamp};
 use vesu::{
     units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
     singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams},
+    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams, DebtCapParams},
     extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
     extension::default_extension_po::{
         IDefaultExtensionDispatcher, IDefaultExtensionDispatcherTrait, InterestRateConfig, PragmaOracleParams,
@@ -336,6 +336,11 @@ fn create_pool(
         collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
     };
 
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
     let shutdown_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
     };
@@ -367,6 +372,7 @@ fn create_pool(
         liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
     ]
         .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
     let shutdown_params = ShutdownParams {
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
@@ -381,6 +387,7 @@ fn create_pool(
             interest_rate_configs,
             oracle_params,
             liquidation_params,
+            debt_caps,
             shutdown_params,
             FeeParams { fee_recipient: creator },
             creator
@@ -487,6 +494,11 @@ fn create_pool_v2(
         collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
     };
 
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
     let shutdown_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
     };
@@ -520,6 +532,7 @@ fn create_pool_v2(
         liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
     ]
         .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
     let shutdown_params = ShutdownParams {
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
@@ -534,6 +547,7 @@ fn create_pool_v2(
             interest_rate_configs,
             chainlink_oracle_params,
             liquidation_params,
+            debt_caps,
             shutdown_params,
             FeeParams { fee_recipient: creator },
             creator

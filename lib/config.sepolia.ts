@@ -112,6 +112,15 @@ export const config: Config = {
           );
           return { collateral_asset_index, debt_asset_index, liquidation_factor: toScale(pair.liquidation_discount) };
         }),
+        debt_caps_params: CONFIG.pair_parameters.map((pair: any) => {
+          const collateral_asset_index = CONFIG.asset_parameters.findIndex(
+            (asset: any) => asset.asset_name === pair.collateral_asset_name,
+          );
+          const debt_asset_index = CONFIG.asset_parameters.findIndex(
+            (asset: any) => asset.asset_name === pair.debt_asset_name,
+          );
+          return { collateral_asset_index, debt_asset_index, debt_cap: toScale(pair.debt_cap) };
+        }),
         shutdown_params: {
           recovery_period: BigInt(CONFIG.pool_parameters.recovery_period),
           subscription_period: BigInt(CONFIG.pool_parameters.subscription_period),
