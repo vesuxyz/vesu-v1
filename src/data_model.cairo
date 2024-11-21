@@ -98,6 +98,13 @@ struct LTVParams {
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
+struct DebtCapParams {
+    collateral_asset_index: usize,
+    debt_asset_index: usize,
+    debt_cap: u256, // [SCALE]
+}
+
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct ModifyPositionParams {
     pool_id: felt252,
     collateral_asset: ContractAddress,

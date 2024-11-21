@@ -1,7 +1,7 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
 use vesu::{
-    data_model::{AssetParams, LTVParams, LTVConfig},
+    data_model::{AssetParams, LTVParams, LTVConfig, DebtCapParams},
     extension::components::{
         interest_rate_model::InterestRateConfig,
         position_hooks::{ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, Pair}, fee_model::FeeConfig,
@@ -83,7 +83,9 @@ trait IDefaultExtension<TContractState> {
     fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
-    fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
+    fn debt_caps(
+        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+    ) -> u256;
     fn interest_rate_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
         self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
@@ -119,6 +121,7 @@ trait IDefaultExtension<TContractState> {
         interest_rate_configs: Span<InterestRateConfig>,
         pragma_oracle_params: Span<PragmaOracleParams>,
         liquidation_params: Span<LiquidationParams>,
+        debt_caps: Span<DebtCapParams>,
         shutdown_params: ShutdownParams,
         fee_params: FeeParams,
         owner: ContractAddress
@@ -129,13 +132,18 @@ trait IDefaultExtension<TContractState> {
         asset_params: AssetParams,
         v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
-        pragma_oracle_params: PragmaOracleParams,
-        debt_cap: u256
+        pragma_oracle_params: PragmaOracleParams
     );
     fn set_asset_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
-    fn set_debt_cap(ref self: TContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256);
+    fn set_debt_cap(
+        ref self: TContractState,
+        pool_id: felt252,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        debt_cap: u256
+    );
     fn set_interest_rate_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
@@ -183,7 +191,7 @@ mod DefaultExtensionPO {
         map_list::{map_list_component, map_list_component::MapListTrait},
         data_model::{
             Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
-            AmountDenomination, AmountType
+            AmountDenomination, AmountType, DebtCapParams
         },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
@@ -403,11 +411,14 @@ mod DefaultExtensionPO {
         /// Returns the debt cap for a given asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
-        /// * `asset` - address of the asset
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `debt_cap` - debt cap
-        fn debt_caps(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> u256 {
-            self.position_hooks.debt_caps.read((pool_id, asset))
+        fn debt_caps(
+            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+        ) -> u256 {
+            self.position_hooks.debt_caps.read((pool_id, collateral_asset, debt_asset))
         }
 
         /// Returns the interest rate configuration for a given pool and asset
@@ -546,6 +557,7 @@ mod DefaultExtensionPO {
         /// * `interest_rate_params` - interest rate model parameters
         /// * `pragma_oracle_params` - pragma oracle parameters
         /// * `liquidation_params` - liquidation parameters
+        /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
         /// # Returns
@@ -559,6 +571,7 @@ mod DefaultExtensionPO {
             mut interest_rate_configs: Span<InterestRateConfig>,
             mut pragma_oracle_params: Span<PragmaOracleParams>,
             mut liquidation_params: Span<LiquidationParams>,
+            mut debt_caps: Span<DebtCapParams>,
             shutdown_params: ShutdownParams,
             fee_params: FeeParams,
             owner: ContractAddress
@@ -655,7 +668,17 @@ mod DefaultExtensionPO {
                         );
                 };
 
-            // set the max shutdown LTVs for each asset
+            // set the debt caps for each pair
+            let mut debt_caps = debt_caps;
+            while !debt_caps
+                .is_empty() {
+                    let params = *debt_caps.pop_front().unwrap();
+                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                    self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, params.debt_cap);
+                };
+
+            // set the max shutdown LTVs for each pair
             let mut shutdown_ltv_params = shutdown_params.ltv_params;
             while !shutdown_ltv_params
                 .is_empty() {
@@ -686,15 +709,13 @@ mod DefaultExtensionPO {
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
         /// * `pragma_oracle_params` - pragma oracle parameters
-        /// * `debt_cap` - debt cap
         fn add_asset(
             ref self: ContractState,
             pool_id: felt252,
             asset_params: AssetParams,
             v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
-            pragma_oracle_params: PragmaOracleParams,
-            debt_cap: u256
+            pragma_oracle_params: PragmaOracleParams
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
@@ -714,9 +735,6 @@ mod DefaultExtensionPO {
                         aggregation_mode: pragma_oracle_params.aggregation_mode
                     }
                 );
-
-            // set the debt cap
-            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
 
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
@@ -753,11 +771,18 @@ mod DefaultExtensionPO {
         /// Sets the debt cap for a given asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
-        /// * `asset` - address of the asset
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         /// * `debt_cap` - debt cap
-        fn set_debt_cap(ref self: ContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256) {
+        fn set_debt_cap(
+            ref self: ContractState,
+            pool_id: felt252,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            debt_cap: u256
+        ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
+            self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, debt_cap);
         }
 
         /// Sets a parameter for a given interest rate configuration for an asset in a pool

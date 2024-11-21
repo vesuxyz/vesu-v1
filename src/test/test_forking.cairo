@@ -43,7 +43,10 @@ mod TestForking {
             components::position_hooks::LiquidationData
         },
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
-        data_model::{AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice},
+        data_model::{
+            AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice,
+            DebtCapParams
+        },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, LiquidatePositionParams},
     };
 
@@ -178,6 +181,45 @@ mod TestForking {
         };
 
         liquidation_params.span()
+    }
+
+    fn generate_debt_caps_for_pairs(
+        all_asset_params: Span<AssetParams>, default_debt_cap: u256
+    ) -> Span<DebtCapParams> {
+        let mut pair_debt_caps: Array<DebtCapParams> = array![];
+
+        let mut i = 0;
+        loop {
+            match all_asset_params.get(i) {
+                Option::Some(boxed_asset_params) => {
+                    let mut asset_params = *boxed_asset_params.unbox();
+                    let mut j = 0;
+                    loop {
+                        match all_asset_params.get(j) {
+                            Option::Some(boxed_paired_asset_params) => {
+                                let mut paired_asset_params = *boxed_paired_asset_params.unbox();
+                                if asset_params.asset != paired_asset_params.asset {
+                                    pair_debt_caps
+                                        .append(
+                                            DebtCapParams {
+                                                collateral_asset_index: i,
+                                                debt_asset_index: j,
+                                                debt_cap: default_debt_cap
+                                            }
+                                        );
+                                }
+                            },
+                            Option::None(_) => { break; }
+                        };
+                        j += 1;
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+            i += 1;
+        };
+
+        pair_debt_caps.span()
     }
 
     fn generate_shutdown_params(all_asset_params: Span<AssetParams>) -> ShutdownParams {
@@ -467,6 +509,7 @@ mod TestForking {
 
         let interest_rate_configs = generate_interest_rate_configs(asset_params);
         let liquidation_params = generate_liquidation_params(asset_params, ((9 * SCALE) / 10).try_into().unwrap());
+        let debt_caps_params = generate_debt_caps_for_pairs(asset_params, 0);
         let shutdown_params = generate_shutdown_params(asset_params);
 
         let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
@@ -593,6 +636,7 @@ mod TestForking {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: creator },
                 creator
@@ -817,6 +861,7 @@ mod TestForking {
 
         let interest_rate_configs = generate_interest_rate_configs(asset_params);
         let liquidation_params = generate_liquidation_params(asset_params, ((9 * SCALE) / 10).try_into().unwrap());
+        let debt_caps_params = generate_debt_caps_for_pairs(asset_params, 0);
         let shutdown_params = generate_shutdown_params(asset_params);
 
         // let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
@@ -845,6 +890,7 @@ mod TestForking {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: creator },
                 creator

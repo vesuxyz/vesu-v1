@@ -9,7 +9,7 @@ mod TestDefaultExtensionCL {
         singleton::{ISingletonDispatcherTrait}, data_model::{AssetParams, LTVParams, LTVConfig, ModifyPositionParams},
         extension::default_extension_po::{
             InterestRateConfig, LiquidationParams, ShutdownParams, FeeParams, VTokenParams, LiquidationConfig,
-            ShutdownConfig, FeeConfig
+            ShutdownConfig, FeeConfig, DebtCapParams
         },
         extension::default_extension_cl::{ChainlinkOracleParams, IDefaultExtensionCLDispatcherTrait},
         test::setup::{COLL_PRAGMA_KEY, deploy_asset_with_decimals, test_interest_rate_config},
@@ -68,6 +68,7 @@ mod TestDefaultExtensionCL {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -83,6 +84,7 @@ mod TestDefaultExtensionCL {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -115,6 +117,7 @@ mod TestDefaultExtensionCL {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -134,6 +137,7 @@ mod TestDefaultExtensionCL {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -166,6 +170,7 @@ mod TestDefaultExtensionCL {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -185,6 +190,7 @@ mod TestDefaultExtensionCL {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -217,6 +223,7 @@ mod TestDefaultExtensionCL {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![collateral_asset_oracle_params].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
@@ -236,6 +243,7 @@ mod TestDefaultExtensionCL {
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -282,9 +290,7 @@ mod TestDefaultExtensionCL {
         let chainlink_oracle_params = ChainlinkOracleParams { aggregator: Zeroable::zero(), timeout: 1 };
 
         extension_v2
-            .add_asset(
-                config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
-            );
+            .add_asset(config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params);
     }
 
     #[test]
@@ -327,9 +333,7 @@ mod TestDefaultExtensionCL {
 
         prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
-            .add_asset(
-                config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
-            );
+            .add_asset(config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params);
         stop_prank(CheatTarget::One(extension_v2.contract_address));
     }
 
@@ -377,9 +381,7 @@ mod TestDefaultExtensionCL {
 
         prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
-            .add_asset(
-                config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
-            );
+            .add_asset(config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params);
         stop_prank(CheatTarget::One(extension_v2.contract_address));
     }
 
@@ -430,9 +432,7 @@ mod TestDefaultExtensionCL {
 
         prank(CheatTarget::One(extension_v2.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v2
-            .add_asset(
-                config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params, 0
-            );
+            .add_asset(config.pool_id_v2, asset_params, v_token_params, interest_rate_config, chainlink_oracle_params);
         stop_prank(CheatTarget::One(extension_v2.contract_address));
 
         let (asset_config, _) = singleton.asset_config(config.pool_id_v2, config.collateral_asset.contract_address);
@@ -1035,10 +1035,18 @@ mod TestDefaultExtensionCL {
         create_pool_v2(extension_v2, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
-        extension_v2.set_debt_cap(config.pool_id_v2, config.collateral_asset.contract_address, 1000);
+        extension_v2
+            .set_debt_cap(
+                config.pool_id_v2, config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000
+            );
         stop_prank(CheatTarget::One(extension_v2.contract_address));
 
-        assert!(extension_v2.debt_caps(config.pool_id_v2, config.collateral_asset.contract_address) == 1000);
+        assert!(
+            extension_v2
+                .debt_caps(
+                    config.pool_id_v2, config.collateral_asset.contract_address, config.debt_asset.contract_address
+                ) == 1000
+        );
     }
 
     #[test]
@@ -1050,8 +1058,16 @@ mod TestDefaultExtensionCL {
 
         create_pool_v2(extension_v2, config, users.creator, Option::None);
 
-        extension_v2.set_debt_cap(config.pool_id_v2, config.collateral_asset.contract_address, 1000);
+        extension_v2
+            .set_debt_cap(
+                config.pool_id_v2, config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000
+            );
 
-        assert!(extension_v2.debt_caps(config.pool_id_v2, config.collateral_asset.contract_address) == 1000);
+        assert!(
+            extension_v2
+                .debt_caps(
+                    config.pool_id_v2, config.collateral_asset.contract_address, config.debt_asset.contract_address
+                ) == 1000
+        );
     }
 }
