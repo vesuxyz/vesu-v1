@@ -5,7 +5,7 @@ trait IMockPragmaSummary<TContractState> {
     fn calculate_twap(
         self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
     ) -> (u128, u32);
-    fn set_twap(ref self: TContractState, twap: u128, decimals: u32);
+    fn set_twap(ref self: TContractState, key: felt252, twap: u128, decimals: u32);
 }
 
 #[starknet::contract]
@@ -15,7 +15,7 @@ mod MockPragmaSummary {
 
     #[storage]
     struct Storage {
-        twap: u128,
+        twaps: LegacyMap::<felt252, u128>,
         decimals: u32,
     }
 
@@ -24,11 +24,15 @@ mod MockPragmaSummary {
         fn calculate_twap(
             self: @ContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64
         ) -> (u128, u32) {
-            (self.twap.read(), self.decimals.read())
+            match data_type {
+                DataType::SpotEntry(key) => { (self.twaps.read(key), self.decimals.read()) },
+                DataType::FutureEntry => { (0, 0) },
+                DataType::GenericEntry => { (0, 0) }
+            }
         }
 
-        fn set_twap(ref self: ContractState, twap: u128, decimals: u32) {
-            self.twap.write(twap);
+        fn set_twap(ref self: ContractState, key: felt252, twap: u128, decimals: u32) {
+            self.twaps.write(key, twap);
             self.decimals.write(decimals);
         }
     }

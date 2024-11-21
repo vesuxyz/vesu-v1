@@ -284,7 +284,7 @@ fn create_pool(
         pragma_key: COLL_PRAGMA_KEY,
         timeout: 0,
         number_of_sources: 2,
-        start_time: 0,
+        start_time_offset: 0,
         time_window: 0,
         aggregation_mode: AggregationMode::Median(())
     };
@@ -292,7 +292,7 @@ fn create_pool(
         pragma_key: DEBT_PRAGMA_KEY,
         timeout: 0,
         number_of_sources: 2,
-        start_time: 0,
+        start_time_offset: 0,
         time_window: 0,
         aggregation_mode: AggregationMode::Median(())
     };
@@ -300,7 +300,7 @@ fn create_pool(
         pragma_key: THIRD_PRAGMA_KEY,
         timeout: 0,
         number_of_sources: 2,
-        start_time: 0,
+        start_time_offset: 0,
         time_window: 0,
         aggregation_mode: AggregationMode::Median(())
     };

@@ -93,7 +93,7 @@ export const config: Config = {
           pragma_key: asset.pragma.pragma_key,
           timeout: 0n,
           number_of_sources: 0n,
-          start_time: 0n, // BigInt(asset.pragma.start_time),
+          start_time_offset: 0n, // BigInt(asset.pragma.start_time_offset),
           time_window: 0n, // BigInt(asset.pragma.time_window),
           aggregation_mode: new CairoCustomEnum({ Median: {} }), // new CairoCustomEnum({ [(asset.pragma.aggregation_mode == 0) ? "Median" : "Error"]: {} })
         })),

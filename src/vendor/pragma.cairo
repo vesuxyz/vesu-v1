@@ -33,6 +33,6 @@ trait IPragmaABI<TContractState> {
 #[starknet::interface]
 trait ISummaryStatsABI<TContractState> {
     fn calculate_twap(
-        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
+        self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64
     ) -> (u128, u32);
 }

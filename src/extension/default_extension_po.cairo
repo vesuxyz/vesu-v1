@@ -21,7 +21,7 @@ struct PragmaOracleParams {
     pragma_key: felt252,
     timeout: u64, // [seconds]
     number_of_sources: u32,
-    start_time: u64, // [seconds]
+    start_time_offset: u64, // [seconds]
     time_window: u64, // [seconds]
     aggregation_mode: AggregationMode
 }
@@ -80,6 +80,7 @@ trait IDefaultExtension<TContractState> {
     fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn pragma_oracle(self: @TContractState) -> ContractAddress;
+    fn pragma_summary(self: @TContractState) -> ContractAddress;
     fn oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> OracleConfig;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
     fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
@@ -373,6 +374,13 @@ mod DefaultExtensionPO {
             self.pragma_oracle.oracle_address()
         }
 
+        /// Returns the address of the pragma summary contract
+        /// # Returns
+        /// * `summary_address` - address of the pragma summary contract
+        fn pragma_summary(self: @ContractState) -> ContractAddress {
+            self.pragma_oracle.summary_address()
+        }
+
         /// Returns the oracle configuration for a given pool and asset
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -582,7 +590,7 @@ mod DefaultExtensionPO {
                     let PragmaOracleParams { pragma_key,
                     timeout,
                     number_of_sources,
-                    start_time,
+                    start_time_offset,
                     time_window,
                     aggregation_mode } =
                         params;
@@ -592,7 +600,7 @@ mod DefaultExtensionPO {
                             pool_id,
                             asset,
                             OracleConfig {
-                                pragma_key, timeout, number_of_sources, start_time, time_window, aggregation_mode
+                                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode
                             }
                         );
 
@@ -701,7 +709,7 @@ mod DefaultExtensionPO {
                         pragma_key: pragma_oracle_params.pragma_key,
                         timeout: pragma_oracle_params.timeout,
                         number_of_sources: pragma_oracle_params.number_of_sources,
-                        start_time: pragma_oracle_params.start_time,
+                        start_time_offset: pragma_oracle_params.start_time_offset,
                         time_window: pragma_oracle_params.time_window,
                         aggregation_mode: pragma_oracle_params.aggregation_mode
                     }

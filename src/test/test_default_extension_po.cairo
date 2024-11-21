@@ -203,7 +203,7 @@ mod TestDefaultExtensionPO {
             pragma_key: COLL_PRAGMA_KEY,
             timeout: 0,
             number_of_sources: 2,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -280,7 +280,7 @@ mod TestDefaultExtensionPO {
             pragma_key: COLL_PRAGMA_KEY,
             timeout: 1,
             number_of_sources: 2,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -325,7 +325,7 @@ mod TestDefaultExtensionPO {
             pragma_key: COLL_PRAGMA_KEY,
             timeout: 1,
             number_of_sources: 2,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -380,7 +380,7 @@ mod TestDefaultExtensionPO {
             pragma_key: Zeroable::zero(),
             timeout: 1,
             number_of_sources: 2,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -434,7 +434,7 @@ mod TestDefaultExtensionPO {
             pragma_key: COLL_PRAGMA_KEY,
             timeout: 1,
             number_of_sources: 2,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };

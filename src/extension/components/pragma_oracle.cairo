@@ -5,7 +5,7 @@ struct OracleConfig {
     pragma_key: felt252,
     timeout: u64, // [seconds]
     number_of_sources: u32, // [0, 255]
-    start_time: u64, // [seconds]
+    start_time_offset: u64, // [seconds]
     time_window: u64, // [seconds]
     aggregation_mode: AggregationMode
 }
@@ -13,8 +13,8 @@ struct OracleConfig {
 fn assert_oracle_config(oracle_config: OracleConfig) {
     assert!(oracle_config.pragma_key != 0, "pragma-key-must-be-set");
     assert!(
-        (oracle_config.start_time == 0 && oracle_config.time_window == 0)
-            || (oracle_config.start_time != 0 && oracle_config.time_window != 0),
+        (oracle_config.start_time_offset == 0 && oracle_config.time_window == 0)
+            || (oracle_config.start_time_offset != 0 && oracle_config.time_window != 0),
         "pragma-start-time-and-time-window-must-be-set-together"
     );
 }
@@ -101,21 +101,30 @@ mod pragma_oracle_component {
         /// * `price` - current price of the asset
         /// * `valid` - whether the price is valid
         fn price(self: @ComponentState<TContractState>, pool_id: felt252, asset: ContractAddress) -> (u256, bool) {
-            let OracleConfig { pragma_key, timeout, number_of_sources, start_time, time_window, aggregation_mode } =
+            let OracleConfig { pragma_key,
+            timeout,
+            number_of_sources,
+            start_time_offset,
+            time_window,
+            aggregation_mode } =
                 self
                 .oracle_configs
                 .read((pool_id, asset));
             let dispatcher = IPragmaABIDispatcher { contract_address: self.oracle_address.read() };
             let response = dispatcher.get_data(DataType::SpotEntry(pragma_key), aggregation_mode);
 
-            // calculate the twap if start_time and time_window are set
-            let price = if start_time == 0 || time_window == 0 {
+            // calculate the twap if start_time_offset and time_window are set
+            let price = if start_time_offset == 0 || time_window == 0 {
                 response.price.into() * SCALE / pow_10(response.decimals.into())
             } else {
                 let summary = ISummaryStatsABIDispatcher { contract_address: self.summary_address.read() };
                 let (value, decimals) = summary
-                    .calculate_twap(DataType::SpotEntry(pragma_key), aggregation_mode, start_time, time_window,);
-
+                    .calculate_twap(
+                        DataType::SpotEntry(pragma_key),
+                        aggregation_mode,
+                        time_window,
+                        get_block_timestamp() - start_time_offset
+                    );
                 value.into() * SCALE / pow_10(decimals.into())
             };
 

@@ -212,7 +212,7 @@ mod TestForking {
             pragma_key: 'ETH/USD',
             timeout: 0,
             number_of_sources: 0,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -233,7 +233,7 @@ mod TestForking {
             pragma_key: 'WBTC/USD',
             timeout: 0,
             number_of_sources: 0,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -254,8 +254,8 @@ mod TestForking {
             pragma_key: 'USDC/USD',
             timeout: 0,
             number_of_sources: 2,
-            start_time: 0,
-            time_window: 0,
+            start_time_offset: 86400 * 7,
+            time_window: 86400 * 6,
             aggregation_mode: AggregationMode::Median(())
         };
 
@@ -275,7 +275,7 @@ mod TestForking {
             pragma_key: 'USDT/USD',
             timeout: 0,
             number_of_sources: 0,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -296,7 +296,7 @@ mod TestForking {
             pragma_key: 'WSTETH/USD',
             timeout: 0,
             number_of_sources: 0,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -319,7 +319,7 @@ mod TestForking {
             pragma_key: 'STRK/USD',
             timeout: 0,
             number_of_sources: 0,
-            start_time: 0,
+            start_time_offset: 0,
             time_window: 0,
             aggregation_mode: AggregationMode::Median(())
         };
@@ -599,8 +599,6 @@ mod TestForking {
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
-
         let mut i = 0;
         loop {
             match asset_params.get(i) {
@@ -614,6 +612,14 @@ mod TestForking {
             };
             i += 1;
         };
+
+        store(
+            extension.contract_address,
+            map_entry_address(selector!("oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),),
+            array!['USDC/USD', 0, 2, 0, 0, 1].span()
+        );
+
+        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         SetupParams {
             singleton,
