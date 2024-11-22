@@ -2,8 +2,8 @@
 mod TestPragmaOracle {
     use core::serde::Serde;
     use snforge_std::{
-        start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
-        cheat_caller_address, store, map_entry_address, CheatSpan
+        start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_caller_address, cheat_caller_address, store, map_entry_address, CheatSpan
     };
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{

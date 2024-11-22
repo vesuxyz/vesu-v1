@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod TestInterestRateModel {
     use snforge_std::{
-        start_cheat_caller_address, stop_cheat_caller_address, ContractClass,
-        start_cheat_block_timestamp_global
+        start_cheat_caller_address, stop_cheat_caller_address, ContractClass, start_cheat_block_timestamp_global
     };
     use starknet::{get_block_timestamp};
     use vesu::{
