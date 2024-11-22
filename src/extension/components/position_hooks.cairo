@@ -25,7 +25,7 @@ fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
     assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 }
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct Pair {
     total_collateral_shares: u256, // packed as u128 [SCALE] 
     total_nominal_debt: u256 // packed as u123 [SCALE]

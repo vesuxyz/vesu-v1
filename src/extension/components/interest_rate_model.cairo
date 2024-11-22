@@ -6,7 +6,7 @@ use vesu::{units::SCALE, packing::{SHIFT_32, SHIFT_64, split_32, split_64}};
 const UTILIZATION_SCALE: u256 = 100_000; // 1e5
 const UTILIZATION_SCALE_TO_SCALE: u256 = 10_000_000_000_000; // 1e13
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct InterestRateConfig {
     min_target_utilization: u256, // [utilization-scale]
     max_target_utilization: u256, // [utilization-scale]
