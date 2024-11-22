@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod TestInterestRateModel {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, start_warp};
+    use snforge_std::{
+        start_cheat_caller_address, stop_cheat_caller_address, ContractClass,
+        start_cheat_block_timestamp_global
+    };
     use starknet::{get_block_timestamp};
     use vesu::{
         units::{SCALE, PERCENT, FRACTION, YEAR_IN_SECONDS, DAY_IN_SECONDS}, math::{pow_scale},
@@ -277,9 +280,9 @@ mod TestInterestRateModel {
 
         assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LENDER
 
@@ -298,9 +301,9 @@ mod TestInterestRateModel {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -323,20 +326,20 @@ mod TestInterestRateModel {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // interest accrued should be reflected since time has passed
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let (position, _, _) = singleton
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_interest_rate_parameter(pool_id, debt_asset.contract_address, 'max_target_utilization', 86_000);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);

@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod TestSingleton {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, start_warp};
+    use snforge_std::{
+        start_cheat_caller_address, stop_cheat_caller_address, get_class_hash, ContractClass,
+        start_cheat_block_timestamp_global
+    };
     use starknet::{get_contract_address, get_block_timestamp};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
@@ -23,9 +26,9 @@ mod TestSingleton {
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         let pool_id = singleton.create_pool(array![].span(), array![].span(), extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert!(pool_id == config.pool_id, "Invalid pool id");
     }
@@ -65,9 +68,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, collateral_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -118,9 +121,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, debt_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -157,9 +160,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, collateral_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -190,9 +193,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, collateral_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -223,9 +226,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, collateral_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -256,9 +259,9 @@ mod TestSingleton {
         let asset_params = array![collateral_asset_params, collateral_asset_params].span();
         let max_position_ltv_params = array![max_position_ltv_params_0, max_position_ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.create_pool(asset_params, max_position_ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -308,9 +311,9 @@ mod TestSingleton {
             is_legacy: false,
             fee_rate: 0
         };
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_config(config.pool_id, asset_params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
@@ -339,17 +342,17 @@ mod TestSingleton {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'max_utilization', 0);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'floor', SCALE);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'fee_rate', SCALE);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config_unsafe(config.pool_id, config.collateral_asset.contract_address);
         assert!(asset_config.max_utilization == 0, "Max utilization not set");
@@ -365,9 +368,9 @@ mod TestSingleton {
 
         assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LENDER
 
@@ -386,9 +389,9 @@ mod TestSingleton {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -411,20 +414,20 @@ mod TestSingleton {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // interest accrued should be reflected since time has passed
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let (position, _, _) = singleton
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(config.pool_id, debt_asset.contract_address, 'fee_rate', SCALE);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
@@ -442,7 +445,7 @@ mod TestSingleton {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton
             .set_ltv_config(
                 config.pool_id,
@@ -450,7 +453,7 @@ mod TestSingleton {
                 config.debt_asset.contract_address,
                 LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]

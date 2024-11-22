@@ -79,7 +79,7 @@ pub(crate) mod TestToken {
 
 #[cfg(test)]
 mod TestTimelock {
-    use snforge_std::{declare, start_warp, CheatTarget};
+    use snforge_std::{declare, start_cheat_block_timestamp_global, DeclareResultTrait, ContractClassTrait};
     use starknet::account::{Call};
     use starknet::{
         get_contract_address, syscalls::{deploy_syscall}, ClassHash, contract_address_const, ContractAddress,
@@ -94,7 +94,10 @@ mod TestTimelock {
         Serde::serialize(@(owner, amount), ref constructor_args);
 
         let (address, _) = deploy_syscall(
-            declare("TestToken").class_hash.try_into().unwrap(), 0, constructor_args.span(), true
+            (*declare("TestToken").unwrap().contract_class().class_hash).try_into().unwrap(),
+            0,
+            constructor_args.span(),
+            true
         )
             .expect('DEPLOY_TOKEN_FAILED');
         IERC20Dispatcher { contract_address: address }
@@ -105,7 +108,10 @@ mod TestTimelock {
         Serde::serialize(@(owner, delay, window), ref constructor_args);
 
         let (address, _) = deploy_syscall(
-            declare("Timelock").class_hash.try_into().unwrap(), 0, constructor_args.span(), true
+            (*declare("Timelock").unwrap().contract_class().class_hash).try_into().unwrap(),
+            0,
+            constructor_args.span(),
+            true
         )
             .expect('DEPLOY_FAILED');
         return ITimelockDispatcher { contract_address: address };
@@ -141,7 +147,7 @@ mod TestTimelock {
     #[test]
     fn test_queue_execute() {
         // set_block_timestamp(1);
-        start_warp(CheatTarget::All, 1);
+        start_cheat_block_timestamp_global(1);
         let timelock = deploy(get_contract_address(), 86400, 3600);
 
         let token = deploy_token(get_contract_address(), 12345);
@@ -156,7 +162,7 @@ mod TestTimelock {
         assert(execution_window.latest == 90001, 'latest');
 
         // set_block_timestamp(86401);
-        start_warp(CheatTarget::All, 86401);
+        start_cheat_block_timestamp_global(86401);
 
         timelock.execute(single_call(transfer_call(token, recipient, 500_u256)));
         assert(token.balance_of(recipient) == 500_u256, 'balance');
@@ -166,7 +172,7 @@ mod TestTimelock {
     #[should_panic(expected: 'HAS_BEEN_CANCELED')]
     fn test_queue_cancel() {
         // set_block_timestamp(1);
-        start_warp(CheatTarget::All, 1);
+        start_cheat_block_timestamp_global(1);
         let timelock = deploy(get_contract_address(), 86400, 3600);
 
         let token = deploy_token(get_contract_address(), 12345);
@@ -177,7 +183,7 @@ mod TestTimelock {
         let id = timelock.queue(single_call(transfer_call(token, recipient, 500_u256)));
 
         // set_block_timestamp(86401);
-        start_warp(CheatTarget::All, 86401);
+        start_cheat_block_timestamp_global(86401);
 
         timelock.cancel(id);
 
@@ -188,7 +194,7 @@ mod TestTimelock {
     #[should_panic(expected: 'ALREADY_EXECUTED')]
     fn test_queue_execute_twice() {
         // set_block_timestamp(1);
-        start_warp(CheatTarget::All, 1);
+        start_cheat_block_timestamp_global(1);
         let timelock = deploy(get_contract_address(), 86400, 3600);
 
         let token = deploy_token(get_contract_address(), 12345);
@@ -199,7 +205,7 @@ mod TestTimelock {
         timelock.queue(single_call(transfer_call(token, recipient, 500_u256)));
 
         // set_block_timestamp(86401);
-        start_warp(CheatTarget::All, 86401);
+        start_cheat_block_timestamp_global(86401);
 
         timelock.execute(single_call(transfer_call(token, recipient, 500_u256)));
         timelock.execute(single_call(transfer_call(token, recipient, 500_u256)));
@@ -209,7 +215,7 @@ mod TestTimelock {
     #[should_panic(expected: 'TOO_EARLY')]
     fn test_queue_executed_too_early() {
         // set_block_timestamp(1);
-        start_warp(CheatTarget::All, 1);
+        start_cheat_block_timestamp_global(1);
         let timelock = deploy(get_contract_address(), 86400, 3600);
 
         let token = deploy_token(get_contract_address(), 12345);
@@ -221,7 +227,7 @@ mod TestTimelock {
 
         let execution_window = timelock.get_execution_window(id);
         // set_block_timestamp(execution_window.earliest - 1);
-        start_warp(CheatTarget::All, execution_window.earliest - 1);
+        start_cheat_block_timestamp_global(execution_window.earliest - 1);
         timelock.execute(single_call(transfer_call(token, recipient, 500_u256)));
     }
 
@@ -229,7 +235,7 @@ mod TestTimelock {
     #[should_panic(expected: 'TOO_LATE')]
     fn test_queue_executed_too_late() {
         // set_block_timestamp(1);
-        start_warp(CheatTarget::All, 1);
+        start_cheat_block_timestamp_global(1);
         let timelock = deploy(get_contract_address(), 86400, 3600);
 
         let token = deploy_token(get_contract_address(), 12345);
@@ -241,7 +247,7 @@ mod TestTimelock {
 
         let execution_window = timelock.get_execution_window(id);
         // set_block_timestamp(execution_window.latest);
-        start_warp(CheatTarget::All, execution_window.latest);
+        start_cheat_block_timestamp_global(execution_window.latest);
         timelock.execute(single_call(transfer_call(token, recipient, 500_u256)));
     }
 }

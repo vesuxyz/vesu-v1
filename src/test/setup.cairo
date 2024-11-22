@@ -1,6 +1,6 @@
 use snforge_std::{
-    declare, ContractClass, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global, cheat_caller_address,
-    CheatSpan, get_class_hash, DeclareResultTrait
+    declare, ContractClass, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
+    start_cheat_block_timestamp_global, cheat_caller_address, CheatSpan, get_class_hash, DeclareResultTrait
 };
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp};
 use vesu::{

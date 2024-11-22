@@ -191,7 +191,7 @@ mod Singleton {
         // (pool_id, asset) -> asset configuration
         asset_configs: LegacyMap::<(felt252, ContractAddress), AssetConfig>,
         // tracks the max. allowed loan-to-value ratio for each asset pairing in each pool
-        // (pool_id, collateral_asset, debt_asset) -> ltv configuration 
+        // (pool_id, collateral_asset, debt_asset) -> ltv configuration
         ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // tracks the state of each position in each pool
         // (pool_id, collateral_asset, debt_asset, user) -> position
@@ -497,7 +497,7 @@ mod Singleton {
             }
         }
 
-        /// Asserts that the deltas are either both zero or non-zero for collateral and debt 
+        /// Asserts that the deltas are either both zero or non-zero for collateral and debt
         fn assert_delta_invariants(
             ref self: ContractState,
             collateral_delta: i257,
@@ -924,8 +924,8 @@ mod Singleton {
             calculate_nominal_debt(debt.abs, rate_accumulator, asset_scale, !debt.is_negative)
         }
 
-        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral assets
-        /// # Arguments
+        /// Calculates the number of collateral shares (that would be e.g. minted) for a given amount of collateral
+        /// assets # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `collateral` - amount of collateral [asset scale]
@@ -955,8 +955,8 @@ mod Singleton {
             collateral_shares
         }
 
-        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral shares
-        /// # Arguments
+        /// Calculates the amount of collateral assets (that can e.g. be redeemed)  for a given amount of collateral
+        /// shares # Arguments
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `collateral_shares` - amount of collateral shares
@@ -1184,20 +1184,18 @@ mod Singleton {
 
             // store all asset configurations
             let mut asset_params_copy = asset_params;
-            while !asset_params_copy
-                .is_empty() {
-                    let params = *asset_params_copy.pop_front().unwrap();
-                    self.set_asset_config(pool_id, params);
-                };
+            while !asset_params_copy.is_empty() {
+                let params = *asset_params_copy.pop_front().unwrap();
+                self.set_asset_config(pool_id, params);
+            };
 
             // store all loan-to-value configurations for each asset pair
-            while !ltv_params
-                .is_empty() {
-                    let params = *ltv_params.pop_front().unwrap();
-                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                    self.set_ltv_config(pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
-                };
+            while !ltv_params.is_empty() {
+                let params = *ltv_params.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                self.set_ltv_config(pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv });
+            };
 
             self.emit(CreatePool { pool_id, extension, creator: get_caller_address() });
 
@@ -1469,7 +1467,8 @@ mod Singleton {
             let mut from_context = self.context(pool_id, from_collateral_asset, from_debt_asset, from_user);
             let mut to_context = self.context(pool_id, to_collateral_asset, to_debt_asset, to_user);
 
-            // fee shares have to be re-attributed since the rate accumulator has already been updated (written to storage)
+            // fee shares have to be re-attributed since the rate accumulator has already been updated (written to
+            // storage)
             from_context.collateral_asset_fee_shares = from_collateral_asset_fee_shares;
             from_context.debt_asset_fee_shares = from_debt_asset_fee_shares;
             to_context.collateral_asset_fee_shares = to_collateral_asset_fee_shares;

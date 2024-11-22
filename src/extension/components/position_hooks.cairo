@@ -330,13 +330,13 @@ mod position_hooks_component {
                 // first violation timestamp added to an empty list (previous_violation_timestamp has to be 0 as well)
                 if violating && oldest_violating_timestamp == 0 {
                     get_block_timestamp()
-                // oldest violation timestamp removed from the list (move to the next oldest violation timestamp)
+                    // oldest violation timestamp removed from the list (move to the next oldest violation timestamp)
                 } else if !violating
                     && oldest_violating_timestamp == previous_violation_timestamp
                     && count_at_violation_timestamp == 1 { // only one entry for that timestamp remaining in the list
                     violation_timestamp_manager
                         .previous(context.pool_id, oldest_violating_timestamp) // get next oldest one
-                // neither the first or the last violation timestamp of the list
+                    // neither the first or the last violation timestamp of the list
                 } else {
                     oldest_violating_timestamp
                 };
@@ -415,7 +415,7 @@ mod position_hooks_component {
             collateral_shares_delta: i257,
             nominal_debt_delta: i257
         ) {
-            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100% 
+            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100%
             if context.debt_asset == Zeroable::zero() {
                 return;
             }
@@ -624,7 +624,7 @@ mod position_hooks_component {
         /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
         /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
         /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
-        /// debt value. 
+        /// debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `data` - liquidation data (optional)

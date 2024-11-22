@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod TestLiquidatePosition {
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
     use starknet::{contract_address_const, get_block_timestamp, get_caller_address};
     use vesu::vendor::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use vesu::{
@@ -143,9 +143,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -167,9 +167,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -194,9 +194,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -223,9 +223,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -247,9 +247,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -273,9 +273,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -302,9 +302,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -326,9 +326,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -352,9 +352,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -381,9 +381,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -405,9 +405,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -430,9 +430,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -468,9 +468,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -492,9 +492,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -523,9 +523,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -561,9 +561,9 @@ mod TestLiquidatePosition {
     //         data: ArrayTrait::new().span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     start_cheat_caller_address(singleton.contract_address, users.lender);
     //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     // BORROWER
 
@@ -585,13 +585,13 @@ mod TestLiquidatePosition {
     //         data: ArrayTrait::new().span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+    //     start_cheat_caller_address(singleton.contract_address, users.borrower);
     //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+    //     start_cheat_caller_address(singleton.contract_address, extension.contract_address);
     //     singleton.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     // LIQUIDATOR
 
@@ -620,9 +620,9 @@ mod TestLiquidatePosition {
     //         data: liquidation_data.span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     start_cheat_caller_address(singleton.contract_address, users.lender);
     //     singleton.liquidate_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     let (position, _, _) = singleton
     //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -641,10 +641,10 @@ mod TestLiquidatePosition {
     //     let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
     //     let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-    //     start_prank(CheatTarget::One(extension.contract_address), users.creator);
+    //     start_cheat_caller_address(extension.contract_address, users.creator);
     //     extension
     //         .set_asset_parameter(pool_id, collateral_asset.contract_address, 'liquidation_factor', 90 * SCALE / 100);
-    //     stop_prank(CheatTarget::One(extension.contract_address));
+    //     stop_cheat_caller_address(extension.contract_address);
 
     //     // LENDER
 
@@ -663,9 +663,9 @@ mod TestLiquidatePosition {
     //         data: ArrayTrait::new().span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     start_cheat_caller_address(singleton.contract_address, users.lender);
     //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     // BORROWER
 
@@ -687,9 +687,9 @@ mod TestLiquidatePosition {
     //         data: ArrayTrait::new().span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+    //     start_cheat_caller_address(singleton.contract_address, users.borrower);
     //     singleton.modify_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     // LIQUIDATOR
 
@@ -712,9 +712,9 @@ mod TestLiquidatePosition {
     //         data: liquidation_data.span()
     //     };
 
-    //     start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+    //     start_cheat_caller_address(singleton.contract_address, users.lender);
     //     singleton.liquidate_position(params);
-    //     stop_prank(CheatTarget::One(singleton.contract_address));
+    //     stop_cheat_caller_address(singleton.contract_address);
 
     //     let (position, _, _) = singleton
     //         .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -750,9 +750,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -774,9 +774,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -805,9 +805,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -843,9 +843,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -867,9 +867,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
@@ -905,9 +905,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let balance_after = ERC20ABIDispatcher { contract_address: debt_asset.contract_address }
             .balance_of(users.lender);
@@ -950,9 +950,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -974,9 +974,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -1006,9 +1006,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -1039,9 +1039,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
@@ -1066,9 +1066,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -1097,9 +1097,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -1133,9 +1133,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
@@ -1160,9 +1160,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -1191,9 +1191,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -1227,9 +1227,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         let reserve_before = asset_config.reserve;
@@ -1254,9 +1254,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // LIQUIDATOR
 
@@ -1285,9 +1285,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, users.borrower);
@@ -1314,7 +1314,7 @@ mod TestLiquidatePosition {
             * debt_scale
             / collateral_scale;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 pool_id,
@@ -1322,13 +1322,13 @@ mod TestLiquidatePosition {
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, debt);
         IMintableDispatcher { contract_address: collateral_asset.contract_address }.mint(users.borrower, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
         // LENDER
 
@@ -1347,9 +1347,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -1367,13 +1367,13 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
+        start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
         collateral_asset.approve(singleton.contract_address, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
@@ -1405,9 +1405,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let response = singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert(response.collateral_delta.abs == collateral, 'collateral_to_receive neq');
         assert(response.debt_delta.abs == debt, 'debt_to_repay neq');
@@ -1438,7 +1438,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 pool_id,
@@ -1446,13 +1446,13 @@ mod TestLiquidatePosition {
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, debt);
         IMintableDispatcher { contract_address: collateral_asset.contract_address }.mint(users.borrower, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
         // LENDER
 
@@ -1471,9 +1471,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -1491,13 +1491,13 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
+        start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
         collateral_asset.approve(singleton.contract_address, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
@@ -1529,9 +1529,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let response = singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert(response.collateral_delta.abs == collateral, 'collateral_to_receive neq');
         assert(response.debt_delta.abs == debt, 'debt_to_repay neq');
@@ -1562,7 +1562,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 90 / 100;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 pool_id,
@@ -1570,13 +1570,13 @@ mod TestLiquidatePosition {
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, debt);
         IMintableDispatcher { contract_address: collateral_asset.contract_address }.mint(users.borrower, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
         // LENDER
 
@@ -1595,9 +1595,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -1615,13 +1615,13 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
+        start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
         collateral_asset.approve(singleton.contract_address, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
@@ -1653,9 +1653,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let response = singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert(response.collateral_delta.abs == collateral, 'collateral_to_receive neq');
         assert(response.debt_delta.abs == debt, 'debt_to_repay neq');
@@ -1686,7 +1686,7 @@ mod TestLiquidatePosition {
         let min_collateral_to_receive = collateral;
         let debt_to_repay = debt * 2;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 pool_id,
@@ -1694,13 +1694,13 @@ mod TestLiquidatePosition {
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, debt);
         IMintableDispatcher { contract_address: collateral_asset.contract_address }.mint(users.borrower, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
         // LENDER
 
@@ -1719,9 +1719,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -1739,13 +1739,13 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
+        start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
         collateral_asset.approve(singleton.contract_address, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
@@ -1777,9 +1777,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let response = singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert(response.collateral_delta.abs == collateral, 'collateral_to_receive neq');
         assert(response.debt_delta.abs == debt, 'debt_to_repay neq');
@@ -1813,7 +1813,7 @@ mod TestLiquidatePosition {
             * debt_scale)
             / (debt_price * 2);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 pool_id,
@@ -1821,13 +1821,13 @@ mod TestLiquidatePosition {
                 debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, 2000);
         IMintableDispatcher { contract_address: debt_asset.contract_address }.mint(users.lender, debt);
         IMintableDispatcher { contract_address: collateral_asset.contract_address }.mint(users.borrower, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
         // LENDER
 
@@ -1846,9 +1846,9 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -1866,13 +1866,13 @@ mod TestLiquidatePosition {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
+        start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
         collateral_asset.approve(singleton.contract_address, collateral);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (asset_config, _) = singleton.asset_config(pool_id, collateral_asset.contract_address);
         let collateral_reserve_before = asset_config.reserve;
@@ -1904,9 +1904,9 @@ mod TestLiquidatePosition {
             data: liquidation_data.span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         let response = singleton.liquidate_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert(response.collateral_delta.abs == collateral / 2, 'collateral_to_receive neq');
         assert(response.debt_delta.abs == debt / 2, 'debt_to_repay neq');

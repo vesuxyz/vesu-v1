@@ -2,7 +2,8 @@
 mod TestPragmaOracle {
     use core::serde::Serde;
     use snforge_std::{
-        start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank, store, map_entry_address
+        start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global, start_cheat_caller_address, stop_cheat_caller_address,
+        cheat_caller_address, store, map_entry_address, CheatSpan
     };
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{
@@ -132,7 +133,7 @@ mod TestPragmaOracle {
         };
         let fee_params = FeeParams { fee_recipient: creator };
 
-        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -147,7 +148,7 @@ mod TestPragmaOracle {
                 fee_params,
                 creator
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         pool_id
     }
 
@@ -219,24 +220,24 @@ mod TestPragmaOracle {
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
         // called at timeout
-        start_warp(CheatTarget::All, get_block_timestamp() + timeout);
+        start_cheat_block_timestamp_global(get_block_timestamp() + timeout);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
 
-        // called at timeout - 1 
-        start_warp(CheatTarget::All, get_block_timestamp() + timeout - 1);
+        // called at timeout - 1
+        start_cheat_block_timestamp_global(get_block_timestamp() + timeout - 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
         assert!(collateral_asset_price.value == SCALE, "Collateral asset price not correctly returned");
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]
@@ -262,8 +263,8 @@ mod TestPragmaOracle {
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
         pragma_oracle.set_last_updated_timestamp(COLL_PRAGMA_KEY, get_block_timestamp());
 
-        // called at timeout + 1 
-        start_warp(CheatTarget::All, get_block_timestamp() + timeout + 1);
+        // called at timeout + 1
+        start_cheat_block_timestamp_global(get_block_timestamp() + timeout + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
@@ -271,7 +272,7 @@ mod TestPragmaOracle {
 
         // stale price
         assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]
@@ -295,14 +296,14 @@ mod TestPragmaOracle {
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
 
-        // number of sources == min_number_of_sources + 1 
+        // number of sources == min_number_of_sources + 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
 
-        // number of sources == min_number_of_sources 
+        // number of sources == min_number_of_sources
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources + 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
@@ -331,7 +332,7 @@ mod TestPragmaOracle {
         let extension_dispatcher = IExtensionDispatcher { contract_address: extension.contract_address };
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: extension.pragma_oracle() };
 
-        // number of sources == min_number_of_sources - 1 
+        // number of sources == min_number_of_sources - 1
         pragma_oracle.set_num_sources_aggregated(COLL_PRAGMA_KEY, min_number_of_sources - 1);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);

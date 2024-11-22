@@ -231,15 +231,15 @@ fn deconstruct_collateral_amount(collateral: Amount, position: Position, asset_c
             // round down
             let position_collateral = calculate_collateral(position.collateral_shares, asset_config, false);
             if position_collateral >= collateral_target {
-                // derive collateral shares from collateral amount, since user provided collateral amount should not be adjusted
-                // negative -> round up
+                // derive collateral shares from collateral amount, since user provided collateral amount should not be
+                // adjusted negative -> round up
                 let shares_delta = calculate_collateral_shares(
                     position_collateral - collateral_target, asset_config, true
                 );
                 (i257_new((position_collateral - collateral_target), true), i257_new(shares_delta, true))
             } else {
-                // derive collateral shares from collateral amount, since user provided collateral amount should not be adjusted
-                // positive -> round down
+                // derive collateral shares from collateral amount, since user provided collateral amount should not be
+                // adjusted positive -> round down
                 let shares_delta = calculate_collateral_shares(
                     collateral_target - position_collateral, asset_config, false
                 );

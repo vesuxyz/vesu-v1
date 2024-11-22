@@ -10,7 +10,7 @@ struct Position {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct AssetConfig { //                                     | slot | packed | notes
-    //                                                      | ---- | ------ | ----- 
+    //                                                      | ---- | ------ | -----
     total_collateral_shares: u256, //       [SCALE]         | 1    | u128   |
     total_nominal_debt: u256, //            [SCALE]         | 1    | u123   |
     reserve: u256, //                       [asset scale]   | 2    | u128   |

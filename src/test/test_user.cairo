@@ -14,7 +14,8 @@ fn to_percent(value: u256) -> u64 {
 mod TestUser {
     use alexandria_math::i257::{i257, i257_new};
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, replace_bytecode
+        start_cheat_caller_address, stop_cheat_caller_address, declare, replace_bytecode, DeclareResultTrait,
+        ContractClassTrait
     };
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp
@@ -52,7 +53,7 @@ mod TestUser {
             >()
         };
 
-        replace_bytecode(singleton.contract_address, declare("Singleton").class_hash);
+        replace_bytecode(singleton.contract_address, *declare("Singleton").unwrap().contract_class().class_hash);
 
         let extension = IDefaultExtensionDispatcher {
             contract_address: contract_address_const::<
@@ -60,7 +61,9 @@ mod TestUser {
             >()
         };
 
-        replace_bytecode(extension.contract_address, declare("DefaultExtensionPO").class_hash);
+        replace_bytecode(
+            extension.contract_address, *declare("DefaultExtensionPO").unwrap().contract_class().class_hash
+        );
 
         let pool_id = 3601893553453722691657585476026095435475878278287859441667450345178654480585;
         let collateral_asset = IERC20Dispatcher {
@@ -78,7 +81,7 @@ mod TestUser {
         let (position, _, _) = singleton
             .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, user);
 
-        start_prank(CheatTarget::One(singleton.contract_address), user);
+        start_cheat_caller_address(singleton.contract_address, user);
         singleton
             .transfer_position(
                 TransferPositionParams {
@@ -99,10 +102,10 @@ mod TestUser {
                     to_data: ArrayTrait::new().span(),
                 }
             );
-        stop_prank(CheatTarget::One(singleton.contract_address));
-    // let wbtc = contract_address_const::<0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac>();
+        stop_cheat_caller_address(singleton.contract_address);
+        // let wbtc = contract_address_const::<0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac>();
 
-    // let collateral_shares = singleton.calculate_collateral_shares(
+        // let collateral_shares = singleton.calculate_collateral_shares(
     //     pool_id, wbtc, i257_new(270738, false)
     // );
     }
