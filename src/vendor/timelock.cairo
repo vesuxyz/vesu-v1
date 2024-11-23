@@ -165,7 +165,7 @@ pub mod Timelock {
     struct Storage {
         owner: ContractAddress,
         config: Config,
-        execution_state: LegacyMap<felt252, ExecutionState>,
+        execution_state: starknet::storage::map::Map<felt252, ExecutionState>,
     }
 
     #[constructor]

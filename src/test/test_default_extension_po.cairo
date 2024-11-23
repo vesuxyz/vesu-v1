@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod TestDefaultExtensionPO {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan};
+    use snforge_std::{
+        start_cheat_caller_address, stop_cheat_caller_address, get_class_hash, ContractClass, cheat_caller_address,
+        CheatSpan
+    };
     use starknet::get_contract_address;
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
@@ -64,7 +67,7 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -79,7 +82,7 @@ mod TestDefaultExtensionPO {
                 FeeParams { fee_recipient: users.creator },
                 users.creator
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -113,11 +116,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
         config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+        stop_cheat_caller_address(config.collateral_asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -132,7 +135,7 @@ mod TestDefaultExtensionPO {
                 FeeParams { fee_recipient: users.creator },
                 users.creator
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -166,11 +169,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
         config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+        stop_cheat_caller_address(config.collateral_asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -185,7 +188,7 @@ mod TestDefaultExtensionPO {
                 FeeParams { fee_recipient: users.creator },
                 users.creator
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -226,11 +229,11 @@ mod TestDefaultExtensionPO {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
         config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+        stop_cheat_caller_address(config.collateral_asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
                 'DefaultExtensionPO',
@@ -245,7 +248,7 @@ mod TestDefaultExtensionPO {
                 FeeParams { fee_recipient: users.creator },
                 users.creator
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -337,13 +340,13 @@ mod TestDefaultExtensionPO {
             aggregation_mode: AggregationMode::Median(())
         };
 
-        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        start_cheat_caller_address(config.collateral_asset.contract_address, users.creator);
         config.collateral_asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+        stop_cheat_caller_address(config.collateral_asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -391,13 +394,13 @@ mod TestDefaultExtensionPO {
             aggregation_mode: AggregationMode::Median(())
         };
 
-        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        start_cheat_caller_address(asset.contract_address, users.creator);
         asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(asset.contract_address));
+        stop_cheat_caller_address(asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -444,13 +447,13 @@ mod TestDefaultExtensionPO {
             aggregation_mode: AggregationMode::Median(())
         };
 
-        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        start_cheat_caller_address(asset.contract_address, users.creator);
         asset.approve(extension.contract_address, INFLATION_FEE);
-        stop_prank(CheatTarget::One(asset.contract_address));
+        stop_cheat_caller_address(asset.contract_address);
 
-        prank(CheatTarget::One(extension.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        cheat_caller_address(extension.contract_address, users.creator, CheatSpan::TargetCalls(1));
         extension.add_asset(config.pool_id, asset_params, v_token_params, interest_rate_config, pragma_oracle_params);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let (asset_config, _) = singleton.asset_config(config.pool_id, config.collateral_asset.contract_address);
         assert!(asset_config.floor != 0, "Asset config not set");
@@ -479,17 +482,17 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'max_utilization', 0);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'floor', SCALE);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_asset_parameter(config.pool_id, config.collateral_asset.contract_address, 'fee_rate', SCALE);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -512,9 +515,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_pool_owner(config.pool_id, users.lender);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -545,12 +548,12 @@ mod TestDefaultExtensionPO {
 
         let ltv_config = LTVConfig { max_ltv: (40 * PERCENT).try_into().unwrap() };
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_ltv_config(
                 config.pool_id, config.collateral_asset.contract_address, config.debt_asset.contract_address, ltv_config
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let ltv_config_ = singleton
             .ltv_config(config.pool_id, config.collateral_asset.contract_address, config.debt_asset.contract_address);
@@ -588,7 +591,7 @@ mod TestDefaultExtensionPO {
 
         let liquidation_factor = 10 * PERCENT;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_liquidation_config(
                 config.pool_id,
@@ -596,7 +599,7 @@ mod TestDefaultExtensionPO {
                 config.debt_asset.contract_address,
                 LiquidationConfig { liquidation_factor: liquidation_factor.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let liquidation_config = extension
             .liquidation_config(
@@ -617,9 +620,9 @@ mod TestDefaultExtensionPO {
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = 12 * DAY_IN_SECONDS;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_config(config.pool_id, ShutdownConfig { recovery_period, subscription_period });
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let shutdown_config = extension.shutdown_config(config.pool_id);
 
@@ -654,9 +657,9 @@ mod TestDefaultExtensionPO {
         let recovery_period = 11 * DAY_IN_SECONDS;
         let subscription_period = DAY_IN_SECONDS / 2;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_shutdown_config(config.pool_id, ShutdownConfig { recovery_period, subscription_period });
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -669,7 +672,7 @@ mod TestDefaultExtensionPO {
 
         let max_ltv = SCALE / 2;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_shutdown_ltv_config(
                 config.pool_id,
@@ -677,7 +680,7 @@ mod TestDefaultExtensionPO {
                 config.debt_asset.contract_address,
                 LTVConfig { max_ltv: max_ltv.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let shutdown_ltv_config = extension
             .shutdown_ltv_config(
@@ -718,7 +721,7 @@ mod TestDefaultExtensionPO {
 
         let max_ltv = SCALE + 1;
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_shutdown_ltv_config(
                 config.pool_id,
@@ -726,7 +729,7 @@ mod TestDefaultExtensionPO {
                 config.debt_asset.contract_address,
                 LTVConfig { max_ltv: max_ltv.try_into().unwrap() }
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -737,9 +740,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_extension(config.pool_id, users.creator);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         assert(singleton.extension(config.pool_id) == users.creator, 'Extension not set');
     }
@@ -764,19 +767,19 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'timeout', 5_u64);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
         assert(oracle_config.timeout == 5_u64, 'Oracle parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_oracle_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'number_of_sources', 11_u64
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
         assert(oracle_config.number_of_sources == 11, 'Oracle parameter not set');
@@ -803,9 +806,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'a', 5_u64);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -817,9 +820,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_oracle_parameter(config.pool_id, Zeroable::zero(), 'timeout', 5_u64);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -830,80 +833,80 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'min_target_utilization', 5
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.min_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'max_target_utilization', 5
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.max_target_utilization == 5, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'target_utilization', 5
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.target_utilization == 5, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'min_full_utilization_rate', 1582470461
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.min_full_utilization_rate == 1582470461, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'max_full_utilization_rate', SCALE * 3
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.max_full_utilization_rate == SCALE * 3, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'zero_utilization_rate', 1
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.zero_utilization_rate == 1, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(config.pool_id, config.collateral_asset.contract_address, 'rate_half_life', 5);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.rate_half_life == 5, 'Interest rate parameter not set');
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_interest_rate_parameter(
                 config.pool_id, config.collateral_asset.contract_address, 'target_rate_percent', 5
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
         let interest_rate_config = extension
             .interest_rate_config(config.pool_id, config.collateral_asset.contract_address);
         assert(interest_rate_config.target_rate_percent == 5, 'Interest rate parameter not set');
@@ -933,9 +936,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_interest_rate_parameter(config.pool_id, config.collateral_asset.contract_address, 'a', 5);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -947,9 +950,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_interest_rate_parameter(config.pool_id, Zeroable::zero(), 'min_target_utilization', 5);
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
     }
 
     #[test]
@@ -960,9 +963,9 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension.set_fee_config(config.pool_id, FeeConfig { fee_recipient: users.lender });
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         let fee_config = extension.fee_config(config.pool_id);
         assert(fee_config.fee_recipient == users.lender, 'Fee config not set');
@@ -988,12 +991,12 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        start_cheat_caller_address(extension.contract_address, users.creator);
         extension
             .set_debt_cap(
                 config.pool_id, config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000
             );
-        stop_prank(CheatTarget::One(extension.contract_address));
+        stop_cheat_caller_address(extension.contract_address);
 
         assert!(
             extension

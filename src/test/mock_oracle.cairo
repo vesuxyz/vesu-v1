@@ -15,7 +15,7 @@ mod MockPragmaSummary {
 
     #[storage]
     struct Storage {
-        twaps: LegacyMap::<felt252, u128>,
+        twaps: starknet::storage::map::Map::<felt252, u128>,
         decimals: u32,
     }
 
@@ -73,9 +73,9 @@ mod MockPragmaOracle {
 
     #[storage]
     struct Storage {
-        prices: LegacyMap::<felt252, u128>,
-        num_sources_aggregated: LegacyMap::<felt252, u32>,
-        last_updated_timestamp: LegacyMap::<felt252, u64>,
+        prices: starknet::storage::map::Map::<felt252, u128>,
+        num_sources_aggregated: starknet::storage::map::Map::<felt252, u32>,
+        last_updated_timestamp: starknet::storage::map::Map::<felt252, u64>,
     }
 
     #[derive(Drop, starknet::Event)]

@@ -47,16 +47,19 @@ mod ListContract {
 
 #[cfg(test)]
 mod TestMapList {
-    use snforge_std::{declare, ContractClassTrait};
-    use vesu::extension::default_extension_po::{
-        ITimestampManagerCallback, ITimestampManagerCallbackDispatcher, ITimestampManagerCallbackDispatcherTrait,
-        ITimestampManagerCallbackSafeDispatcher, ITimestampManagerCallbackSafeDispatcherTrait
+    use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
+    use vesu::{
+        extension::default_extension_po::{
+            ITimestampManagerCallback, ITimestampManagerCallbackDispatcher, ITimestampManagerCallbackDispatcherTrait,
+            ITimestampManagerCallbackSafeDispatcher, ITimestampManagerCallbackSafeDispatcherTrait
+        },
+        test::setup::{deploy_contract}
     };
 
     const id: felt252 = 42;
 
     fn setup_contract() -> ITimestampManagerCallbackDispatcher {
-        let contract_address = declare("ListContract").deploy(@array![]).unwrap();
+        let contract_address = deploy_contract("ListContract");
         ITimestampManagerCallbackDispatcher { contract_address }
     }
 

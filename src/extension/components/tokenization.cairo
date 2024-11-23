@@ -1,7 +1,6 @@
 #[starknet::component]
 mod tokenization_component {
     use alexandria_math::i257::i257;
-    use integer::BoundedInt;
     use starknet::{ContractAddress, get_contract_address, deploy_syscall};
     use vesu::{
         units::SCALE, data_model::Amount, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
@@ -14,10 +13,10 @@ mod tokenization_component {
         v_token_class_hash: felt252,
         // tracks the collateral asset for each vToken in a pool
         // (pool_id, vToken) -> collateral_asset
-        collateral_asset_for_v_token: LegacyMap::<(felt252, ContractAddress), ContractAddress>,
+        collateral_asset_for_v_token: starknet::storage::map::Map::<(felt252, ContractAddress), ContractAddress>,
         // tracks the vToken for each collateral asset in a pool
         // (pool_id, collateral_asset) -> vToken
-        v_token_for_collateral_asset: LegacyMap::<(felt252, ContractAddress), ContractAddress>
+        v_token_for_collateral_asset: starknet::storage::map::Map::<(felt252, ContractAddress), ContractAddress>
     }
 
     #[derive(Drop, starknet::Event)]

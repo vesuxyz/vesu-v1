@@ -22,7 +22,7 @@ mod chainlink_oracle_component {
     #[storage]
     struct Storage {
         // (pool_id, asset) -> oracle configuration
-        chainlink_oracle_configs: LegacyMap::<(felt252, ContractAddress), ChainlinkOracleConfig>,
+        chainlink_oracle_configs: starknet::storage::map::Map::<(felt252, ContractAddress), ChainlinkOracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

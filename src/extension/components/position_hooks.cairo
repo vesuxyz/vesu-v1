@@ -25,7 +25,7 @@ fn assert_liquidation_config(liquidation_config: LiquidationConfig) {
     assert!(liquidation_config.liquidation_factor.into() <= SCALE, "invalid-liquidation-config");
 }
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct Pair {
     total_collateral_shares: u256, // packed as u128 [SCALE] 
     total_nominal_debt: u256 // packed as u123 [SCALE]
@@ -92,24 +92,26 @@ mod position_hooks_component {
     struct Storage {
         // contains the shutdown configuration for each pool
         // pool_id -> shutdown configuration
-        shutdown_configs: LegacyMap::<felt252, ShutdownConfig>,
+        shutdown_configs: starknet::storage::map::Map::<felt252, ShutdownConfig>,
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        shutdown_ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        shutdown_ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        liquidation_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
+        liquidation_configs: starknet::storage::map::Map::<
+            (felt252, ContractAddress, ContractAddress), LiquidationConfig
+        >,
         // contains the timestamp for each pair at which the pair first caused violation (triggered recovery mode)
         // (pool_id, collateral asset, debt asset) -> timestamp
-        violation_timestamps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u64>,
+        violation_timestamps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u64>,
         // contains the number of pairs that caused a violation at each timestamp
         // timestamp -> number of items
-        violation_timestamp_counts: LegacyMap::<(felt252, u64), u128>,
+        violation_timestamp_counts: starknet::storage::map::Map::<(felt252, u64), u128>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>,
+        pairs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        debt_caps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u256>
+        debt_caps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u256>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -330,13 +332,13 @@ mod position_hooks_component {
                 // first violation timestamp added to an empty list (previous_violation_timestamp has to be 0 as well)
                 if violating && oldest_violating_timestamp == 0 {
                     get_block_timestamp()
-                // oldest violation timestamp removed from the list (move to the next oldest violation timestamp)
+                    // oldest violation timestamp removed from the list (move to the next oldest violation timestamp)
                 } else if !violating
                     && oldest_violating_timestamp == previous_violation_timestamp
                     && count_at_violation_timestamp == 1 { // only one entry for that timestamp remaining in the list
                     violation_timestamp_manager
                         .previous(context.pool_id, oldest_violating_timestamp) // get next oldest one
-                // neither the first or the last violation timestamp of the list
+                    // neither the first or the last violation timestamp of the list
                 } else {
                     oldest_violating_timestamp
                 };
@@ -415,7 +417,7 @@ mod position_hooks_component {
             collateral_shares_delta: i257,
             nominal_debt_delta: i257
         ) {
-            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100% 
+            // skip updating the pairs if the debt asset is zero as the pair's ltv is always 100%
             if context.debt_asset == Zeroable::zero() {
                 return;
             }
@@ -624,7 +626,7 @@ mod position_hooks_component {
         /// In an event where there's not enough collateral to cover the debt, the liquidation will result in bad debt.
         /// The bad debt is attributed to the pool and distributed amongst the lenders of the corresponding
         /// collateral asset. The liquidator receives all the collateral but only has to repay the proportioned
-        /// debt value. 
+        /// debt value.
         /// # Arguments
         /// * `context` - contextual state of the user (position owner)
         /// * `data` - liquidation data (optional)

@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod TestReentrancy {
     use snforge_std::{
-        start_prank, stop_prank, start_warp, CheatTarget, ContractClassTrait, ContractClass, get_class_hash
+        start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global, ContractClassTrait,
+        ContractClass, get_class_hash
     };
     use starknet::{ContractAddress, get_contract_address, get_block_timestamp};
     use vesu::{
@@ -53,10 +54,10 @@ mod TestReentrancy {
         let asset_params = array![collateral_asset_params, debt_asset_params].span();
         let ltv_params = array![ltv_params_0, ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         let pool_id = ISingletonDispatcher { contract_address: singleton.contract_address }
             .create_pool(asset_params, ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let params = ModifyPositionParams {
             pool_id,
@@ -70,9 +71,9 @@ mod TestReentrancy {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -115,12 +116,12 @@ mod TestReentrancy {
         let asset_params = array![collateral_asset_params, debt_asset_params].span();
         let ltv_params = array![ltv_params_0, ltv_params_1].span();
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         let pool_id = ISingletonDispatcher { contract_address: singleton.contract_address }
             .create_pool(asset_params, ltv_params, extension.contract_address);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         singleton.asset_config(pool_id, debt_asset.contract_address);
     }

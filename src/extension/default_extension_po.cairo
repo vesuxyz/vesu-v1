@@ -230,9 +230,9 @@ mod DefaultExtensionPO {
         // address of the singleton contract
         singleton: ContractAddress,
         // tracks the owner for each pool
-        owner: LegacyMap::<felt252, ContractAddress>,
+        owner: starknet::storage::map::Map::<felt252, ContractAddress>,
         // tracks the name for each pool
-        pool_names: LegacyMap::<felt252, felt252>,
+        pool_names: starknet::storage::map::Map::<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -499,7 +499,8 @@ mod DefaultExtensionPO {
         /// * `pool_id` - id of the pool
         /// * `violation_timestamp` - timestamp at which the pair transitioned to recovery mode
         /// # Returns
-        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs transitioned to recovery mode at that timestamp
+        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs transitioned to recovery mode at that
+        /// timestamp
         fn violation_timestamp_count(self: @ContractState, pool_id: felt252, violation_timestamp: u64) -> u128 {
             self.position_hooks.violation_timestamp_counts.read((pool_id, violation_timestamp))
         }
@@ -535,7 +536,7 @@ mod DefaultExtensionPO {
             self.tokenization.v_token_for_collateral_asset(pool_id, collateral_asset)
         }
 
-        /// Returns the default pairing (collateral asset, debt asset) used for 
+        /// Returns the default pairing (collateral asset, debt asset) used for
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `v_token` - address of the vToken
@@ -594,103 +595,99 @@ mod DefaultExtensionPO {
 
             let mut asset_params_copy = asset_params;
             let mut i = 0;
-            while !asset_params_copy
-                .is_empty() {
-                    let asset = *asset_params_copy.pop_front().unwrap().asset;
+            while !asset_params_copy.is_empty() {
+                let asset = *asset_params_copy.pop_front().unwrap().asset;
 
-                    // set the oracle config
-                    let params = *pragma_oracle_params.pop_front().unwrap();
-                    let PragmaOracleParams { pragma_key,
-                    timeout,
-                    number_of_sources,
-                    start_time_offset,
-                    time_window,
-                    aggregation_mode } =
-                        params;
-                    self
-                        .pragma_oracle
-                        .set_oracle_config(
+                // set the oracle config
+                let params = *pragma_oracle_params.pop_front().unwrap();
+                let PragmaOracleParams { pragma_key,
+                timeout,
+                number_of_sources,
+                start_time_offset,
+                time_window,
+                aggregation_mode } =
+                    params;
+                self
+                    .pragma_oracle
+                    .set_oracle_config(
+                        pool_id,
+                        asset,
+                        OracleConfig {
+                            pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode
+                        }
+                    );
+
+                // set the interest rate model configuration
+                let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
+                self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
+
+                let v_token_config = *v_token_params.at(i);
+                let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
+
+                // deploy the vToken for the the collateral asset
+                self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
+
+                // burn inflation fee
+                let asset = IERC20Dispatcher { contract_address: asset };
+                asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
+                asset.approve(singleton.contract_address, INFLATION_FEE);
+                singleton
+                    .modify_position(
+                        ModifyPositionParams {
                             pool_id,
-                            asset,
-                            OracleConfig {
-                                pragma_key, timeout, number_of_sources, start_time_offset, time_window, aggregation_mode
-                            }
-                        );
+                            collateral_asset: asset.contract_address,
+                            debt_asset: Zeroable::zero(),
+                            user: contract_address_const::<'ZERO'>(),
+                            collateral: Amount {
+                                amount_type: AmountType::Delta,
+                                denomination: AmountDenomination::Assets,
+                                value: i257_new(INFLATION_FEE, false),
+                            },
+                            debt: Default::default(),
+                            data: ArrayTrait::new().span()
+                        }
+                    );
 
-                    // set the interest rate model configuration
-                    let interest_rate_config = *interest_rate_configs.pop_front().unwrap();
-                    self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
-
-                    let v_token_config = *v_token_params.at(i);
-                    let VTokenParams { v_token_name, v_token_symbol } = v_token_config;
-
-                    // deploy the vToken for the the collateral asset
-                    self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
-
-                    // burn inflation fee
-                    let asset = IERC20Dispatcher { contract_address: asset };
-                    asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
-                    asset.approve(singleton.contract_address, INFLATION_FEE);
-                    singleton
-                        .modify_position(
-                            ModifyPositionParams {
-                                pool_id,
-                                collateral_asset: asset.contract_address,
-                                debt_asset: Zeroable::zero(),
-                                user: contract_address_const::<'ZERO'>(),
-                                collateral: Amount {
-                                    amount_type: AmountType::Delta,
-                                    denomination: AmountDenomination::Assets,
-                                    value: i257_new(INFLATION_FEE, false),
-                                },
-                                debt: Default::default(),
-                                data: ArrayTrait::new().span()
-                            }
-                        );
-
-                    i += 1;
-                };
+                i += 1;
+            };
 
             // set the liquidation config for each pair
             let mut liquidation_params = liquidation_params;
-            while !liquidation_params
-                .is_empty() {
-                    let params = *liquidation_params.pop_front().unwrap();
-                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                    self
-                        .position_hooks
-                        .set_liquidation_config(
-                            pool_id,
-                            collateral_asset,
-                            debt_asset,
-                            LiquidationConfig { liquidation_factor: params.liquidation_factor }
-                        );
-                };
+            while !liquidation_params.is_empty() {
+                let params = *liquidation_params.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                self
+                    .position_hooks
+                    .set_liquidation_config(
+                        pool_id,
+                        collateral_asset,
+                        debt_asset,
+                        LiquidationConfig { liquidation_factor: params.liquidation_factor }
+                    );
+            };
 
             // set the debt caps for each pair
             let mut debt_caps = debt_caps;
-            while !debt_caps
-                .is_empty() {
-                    let params = *debt_caps.pop_front().unwrap();
-                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                    self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, params.debt_cap);
-                };
+            while !debt_caps.is_empty() {
+                let params = *debt_caps.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, params.debt_cap);
+            };
 
             // set the max shutdown LTVs for each pair
             let mut shutdown_ltv_params = shutdown_params.ltv_params;
-            while !shutdown_ltv_params
-                .is_empty() {
-                    let params = *shutdown_ltv_params.pop_front().unwrap();
-                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
-                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
-                    self
-                        .position_hooks
-                        .set_shutdown_ltv_config(
-                            pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv }
-                        );
-                };
+            while !shutdown_ltv_params.is_empty() {
+                let params = *shutdown_ltv_params.pop_front().unwrap();
+                let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                self
+                    .position_hooks
+                    .set_shutdown_ltv_config(
+                        pool_id, collateral_asset, debt_asset, LTVConfig { max_ltv: params.max_ltv }
+                    );
+            };
 
             // set the shutdown config
             let ShutdownParams { recovery_period, subscription_period, .. } = shutdown_params;
@@ -851,7 +848,7 @@ mod DefaultExtensionPO {
         /// * `pool_id` - id of the pool
         /// * `asset` - address of the asset
         /// * `parameter` - parameter name
-        /// * `value` - value of the parameter 
+        /// * `value` - value of the parameter
         fn set_asset_parameter(
             ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
         ) {
@@ -916,8 +913,10 @@ mod DefaultExtensionPO {
         /// # Returns
         /// * `shutdown_mode` - shutdown mode
         /// * `violation` - whether the pair currently violates any of the invariants (transitioned to recovery mode)
-        /// * `previous_violation_timestamp` - timestamp at which the pair previously violated the invariants (transitioned to recovery mode)
-        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that timestamp
+        /// * `previous_violation_timestamp` - timestamp at which the pair previously violated the invariants
+        /// (transitioned to recovery mode)
+        /// * `count_at_violation_timestamp_timestamp` - count of how many pairs violated the invariants at that
+        /// timestamp
         fn shutdown_status(
             self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
         ) -> ShutdownStatus {

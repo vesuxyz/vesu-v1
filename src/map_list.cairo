@@ -4,7 +4,7 @@ mod map_list_component {
     struct Storage {
         // A list of lists
         // (list id, item) -> next item
-        lists: LegacyMap<(felt252, u64), u64>,
+        lists: starknet::storage::map::Map<(felt252, u64), u64>,
     }
 
     #[event]
@@ -96,7 +96,7 @@ mod map_list_component {
 
     #[generate_trait]
     impl Private<TContractState, +HasComponent<TContractState>> of PrivateTrait<TContractState> {
-        /// Returns the item before `item_after` or 0 if the item is the first one. 
+        /// Returns the item before `item_after` or 0 if the item is the first one.
         /// Reverts if `item_after` is not found
         /// Cost increases with the list size
         fn find_item_before(self: @ComponentState<TContractState>, list_id: felt252, item_after: u64) -> u64 {

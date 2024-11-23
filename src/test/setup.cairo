@@ -1,6 +1,7 @@
+use core::num::traits::Bounded;
 use snforge_std::{
-    declare, ContractClass, ContractClassTrait, start_prank, stop_prank, start_warp, stop_warp, CheatTarget, prank,
-    CheatSpan, get_class_hash
+    declare, ContractClass, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
+    start_cheat_block_timestamp_global, cheat_caller_address, CheatSpan, get_class_hash, DeclareResultTrait
 };
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp};
 use vesu::{
@@ -68,15 +69,19 @@ struct TestConfig {
 }
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
-    declare(name).deploy(@array![]).unwrap()
+    let contract = declare(name).unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
+    contract_address
 }
 
 fn deploy_with_args(name: ByteArray, constructor_args: Array<felt252>) -> ContractAddress {
-    declare(name).deploy(@constructor_args).unwrap()
+    let contract = declare(name).unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@constructor_args).unwrap();
+    contract_address
 }
 
 fn deploy_assets(recipient: ContractAddress) -> (IERC20Dispatcher, IERC20Dispatcher, IERC20Dispatcher) {
-    let class = declare("MockAsset");
+    let class = declare("MockAsset").unwrap().contract_class();
 
     // mint 100 collateral and debt assets
 
@@ -85,17 +90,20 @@ fn deploy_assets(recipient: ContractAddress) -> (IERC20Dispatcher, IERC20Dispatc
     let calldata = array![
         'Collateral', 'COLL', decimals.into(), supply.low.into(), supply.high.into(), recipient.into()
     ];
-    let collateral_asset = IERC20Dispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let collateral_asset = IERC20Dispatcher { contract_address };
 
     let decimals = 12;
     let supply = 100 * pow_10(decimals);
     let calldata = array!['Debt', 'DEBT', decimals.into(), supply.low.into(), supply.high.into(), recipient.into()];
-    let debt_asset = IERC20Dispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let debt_asset = IERC20Dispatcher { contract_address };
 
     let decimals = 18;
     let supply = 100 * pow_10(decimals);
     let calldata = array!['Third', 'THIRD', decimals.into(), supply.low.into(), supply.high.into(), recipient.into()];
-    let third_asset = IERC20Dispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let third_asset = IERC20Dispatcher { contract_address };
 
     (collateral_asset, debt_asset, third_asset)
 }
@@ -107,7 +115,8 @@ fn deploy_asset(class: ContractClass, recipient: ContractAddress) -> IERC20Dispa
 fn deploy_asset_with_decimals(class: ContractClass, recipient: ContractAddress, decimals: u32) -> IERC20Dispatcher {
     let supply = 100 * pow_10(decimals);
     let calldata = array!['Asset', 'ASSET', decimals.into(), supply.low.into(), supply.high.into(), recipient.into()];
-    let asset = IERC20Dispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let asset = IERC20Dispatcher { contract_address };
 
     asset
 }
@@ -120,7 +129,7 @@ fn setup_env(
 ) -> Env {
     let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
 
-    start_warp(CheatTarget::All, get_block_timestamp() + 1);
+    start_cheat_block_timestamp_global(get_block_timestamp() + 1);
 
     let users = Users {
         creator: contract_address_const::<'creator'>(),
@@ -139,17 +148,17 @@ fn setup_env(
 
     let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
 
-    let v_token_class_hash = declare("VToken").class_hash;
+    let v_token_class_hash: felt252 = (*declare("VToken").unwrap().contract_class().class_hash).try_into().unwrap();
 
     let args = array![
         singleton.contract_address.into(),
         mock_pragma_oracle.contract_address.into(),
         mock_pragma_summary.contract_address.into(),
-        v_token_class_hash.into()
+        v_token_class_hash
     ];
     let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtensionPO", args) };
 
-    let args = array![singleton.contract_address.into(), v_token_class_hash.into()];
+    let args = array![singleton.contract_address.into(), v_token_class_hash];
     let extension_v2 = IDefaultExtensionCLDispatcher { contract_address: deploy_with_args("DefaultExtensionCL", args) };
 
     // deploy collateral and borrow assets
@@ -166,51 +175,51 @@ fn setup_env(
     };
 
     // transfer 2x INFLATION_FEE to creator
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+    start_cheat_caller_address(collateral_asset.contract_address, users.lender);
     collateral_asset.transfer(users.creator, INFLATION_FEE * 2);
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+    stop_cheat_caller_address(collateral_asset.contract_address);
+    start_cheat_caller_address(debt_asset.contract_address, users.lender);
     debt_asset.transfer(users.creator, INFLATION_FEE * 2);
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-    start_prank(CheatTarget::One(third_asset.contract_address), users.lender);
+    stop_cheat_caller_address(debt_asset.contract_address);
+    start_cheat_caller_address(third_asset.contract_address, users.lender);
     third_asset.transfer(users.creator, INFLATION_FEE * 2);
-    stop_prank(CheatTarget::One(third_asset.contract_address));
+    stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Extension and ExtensionV2 to transfer assets on behalf of creator
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.creator);
-    collateral_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    collateral_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.creator);
-    debt_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    debt_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-    start_prank(CheatTarget::One(third_asset.contract_address), users.creator);
-    third_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    third_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(third_asset.contract_address));
+    start_cheat_caller_address(collateral_asset.contract_address, users.creator);
+    collateral_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(collateral_asset.contract_address);
+    start_cheat_caller_address(debt_asset.contract_address, users.creator);
+    debt_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(debt_asset.contract_address);
+    start_cheat_caller_address(third_asset.contract_address, users.creator);
+    third_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Singleton to transfer assets on behalf of lender
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
-    debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
-    collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-    start_prank(CheatTarget::One(third_asset.contract_address), users.lender);
-    third_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(third_asset.contract_address));
+    start_cheat_caller_address(debt_asset.contract_address, users.lender);
+    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(debt_asset.contract_address);
+    start_cheat_caller_address(collateral_asset.contract_address, users.lender);
+    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(collateral_asset.contract_address);
+    start_cheat_caller_address(third_asset.contract_address, users.lender);
+    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Singleton to transfer assets on behalf of borrower
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.borrower);
-    debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.borrower);
-    collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-    start_prank(CheatTarget::One(third_asset.contract_address), users.borrower);
-    third_asset.approve(singleton.contract_address, integer::BoundedInt::max());
-    stop_prank(CheatTarget::One(third_asset.contract_address));
+    start_cheat_caller_address(debt_asset.contract_address, users.borrower);
+    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(debt_asset.contract_address);
+    start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
+    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(collateral_asset.contract_address);
+    start_cheat_caller_address(third_asset.contract_address, users.borrower);
+    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
+    stop_cheat_caller_address(third_asset.contract_address);
 
     if oracle_address.is_zero() {
         mock_pragma_oracle.set_price(COLL_PRAGMA_KEY, SCALE_128);
@@ -377,7 +386,7 @@ fn create_pool(
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
 
-    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+    cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
             'DefaultExtensionPO',
@@ -392,7 +401,7 @@ fn create_pool(
             FeeParams { fee_recipient: creator },
             creator
         );
-    stop_prank(CheatTarget::One(extension.contract_address));
+    stop_cheat_caller_address(extension.contract_address);
 
     let coll_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.collateral_asset.contract_address);
     let debt_v_token = extension.v_token_for_collateral_asset(config.pool_id, config.debt_asset.contract_address);
@@ -447,13 +456,14 @@ fn create_pool_v2(
         fee_rate: 1 * PERCENT
     };
 
-    let class = declare("MockChainlinkAggregator");
+    let class = declare("MockChainlinkAggregator").unwrap().contract_class();
     let calldata = array![];
-    let collateral_mock_oracle = IMockChainlinkAggregatorDispatcher {
-        contract_address: class.deploy(@calldata).unwrap()
-    };
-    let debt_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address: class.deploy(@calldata).unwrap() };
-    let third_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address: class.deploy(@calldata).unwrap() };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let collateral_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let debt_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address };
+    let (contract_address, _) = class.deploy(@calldata).unwrap();
+    let third_mock_oracle = IMockChainlinkAggregatorDispatcher { contract_address };
 
     let collateral_asset_oracle_params = ChainlinkOracleParams {
         aggregator: collateral_mock_oracle.contract_address, timeout: 0
@@ -537,7 +547,7 @@ fn create_pool_v2(
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
 
-    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+    cheat_caller_address(extension.contract_address, creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
             'DefaultExtensionCL',
@@ -552,7 +562,7 @@ fn create_pool_v2(
             FeeParams { fee_recipient: creator },
             creator
         );
-    stop_prank(CheatTarget::One(extension.contract_address));
+    stop_cheat_caller_address(extension.contract_address);
 
     let coll_v_token = extension
         .v_token_for_collateral_asset(config.pool_id_v2, config.collateral_asset.contract_address);
@@ -620,22 +630,22 @@ fn setup_pool(
 
     // fund borrower with collateral
     if fund_borrower {
-        start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+        start_cheat_caller_address(collateral_asset.contract_address, users.lender);
         collateral_asset.transfer(users.borrower, collateral_to_deposit * 2);
-        stop_prank(CheatTarget::One(collateral_asset.contract_address));
+        stop_cheat_caller_address(collateral_asset.contract_address);
     }
 
-    start_prank(CheatTarget::One(extension.contract_address), users.creator);
+    start_cheat_caller_address(extension.contract_address, users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 0);
     extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
     extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', 0);
-    stop_prank(CheatTarget::One(extension.contract_address));
+    stop_cheat_caller_address(extension.contract_address);
 
-    start_prank(CheatTarget::One(extension.contract_address), users.creator);
+    start_cheat_caller_address(extension.contract_address, users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', SCALE / 10_000);
     extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', SCALE / 10_000);
-    stop_prank(CheatTarget::One(extension.contract_address));
+    stop_cheat_caller_address(extension.contract_address);
 
     (singleton, extension, config, users, terms)
 }

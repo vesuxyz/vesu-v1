@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: ISC
-// This implementation is inspired by https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol”
+// This implementation is inspired by
+// https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol”
 
 use vesu::{units::SCALE, packing::{SHIFT_32, SHIFT_64, split_32, split_64}};
 
 const UTILIZATION_SCALE: u256 = 100_000; // 1e5
 const UTILIZATION_SCALE_TO_SCALE: u256 = 10_000_000_000_000; // 1e13
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
+#[derive(PartialEq, Copy, Drop, Serde)]
 struct InterestRateConfig {
     min_target_utilization: u256, // [utilization-scale]
     max_target_utilization: u256, // [utilization-scale]
@@ -117,7 +118,7 @@ mod interest_rate_model_component {
     #[storage]
     struct Storage {
         // (pool_id, asset) -> interest rate configuration
-        interest_rate_configs: LegacyMap::<(felt252, ContractAddress), InterestRateConfig>,
+        interest_rate_configs: starknet::storage::map::Map::<(felt252, ContractAddress), InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -285,7 +286,8 @@ mod interest_rate_model_component {
             zero_utilization_rate + (utilization * (target_rate - zero_utilization_rate)) / target_utilization
         } else {
             // For readability, the following formula is equivalent to:
-            // let slope = (((next_full_utilization_rate - target_rate) * UTILIZATION_SCALE) / (UTILIZATION_SCALE - target_utilization));
+            // let slope = (((next_full_utilization_rate - target_rate) * UTILIZATION_SCALE) / (UTILIZATION_SCALE -
+            // target_utilization));
             // target_rate + ((utilization - target_utilization) * slope) / UTILIZATION_SCALE
 
             target_rate
@@ -301,7 +303,7 @@ mod interest_rate_model_component {
     /// # Arguments
     /// * `interest_rate_config` - interest rate configuration
     /// * `time_delta` - elapsed time since last update given in seconds [seconds]
-    /// * `utilization` - utilization (% 5 decimals of precision) [utilization-scale] 
+    /// * `utilization` - utilization (% 5 decimals of precision) [utilization-scale]
     /// * `full_utilization_rate` - interest value when utilization is 100%, given with 18 decimals of precision [SCALE]
     /// # Returns
     /// * `full_utilization_rate` - new interest rate at full utilization [SCALE]

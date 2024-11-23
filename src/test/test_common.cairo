@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod TestCommon {
     use alexandria_math::i257::{i257, i257_new, U256IntoI257};
-    use snforge_std::{cheatcodes::{start_warp, stop_warp, CheatTarget}};
+    use snforge_std::{start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global};
     use vesu::data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination};
     use vesu::{
         units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS, PERCENT},
@@ -188,29 +188,29 @@ mod TestCommon {
     }
 
     #[test]
-    // which ranges to test for rate accumulator? 
+    // which ranges to test for rate accumulator?
     fn test_calculate_rate_accumulator() {
         let last_updated = 95;
         let current_time = last_updated + 5;
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
         let last_rate_accumulator = SCALE;
         let interest_rate = 1050000000000000000;
         let accumulator_1 = calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate);
         let accumulator_2 = calculate_rate_accumulator(current_time, accumulator_1, interest_rate);
         assert!(accumulator_1 == accumulator_2, "Rate accumulator failed");
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]
     fn test_calculate_unsafe_rate_accumulator() {
         let last_updated = 1707509060;
         let current_time = last_updated + (360 * DAY_IN_SECONDS);
-        start_warp(CheatTarget::All, current_time);
+        start_cheat_block_timestamp_global(current_time);
         let last_rate_accumulator = SCALE;
         let interest_rate = 100824704600; // 300% per year
         let accumulator = calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate);
         assert!(accumulator > 18 * SCALE, "accumulator should be above 18");
-        stop_warp(CheatTarget::All);
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]
@@ -792,7 +792,7 @@ mod TestCommon {
             ref context, collateral, debt, bad_debt
         );
 
-        //deconstruction works correctly 
+        //deconstruction works correctly
         assert!(expected_collateral_delta == calculated_collateral_delta, "Collateral delta deconstruction incorrect");
         assert!(
             expected_collateral_shares_delta == calculated_collateral_shares_delta,
@@ -909,7 +909,7 @@ mod TestCommon {
             ref context, collateral, debt, bad_debt
         );
 
-        //deconstruction works correctly 
+        //deconstruction works correctly
         assert!(expected_collateral_delta == calculated_collateral_delta, "Collateral delta deconstruction incorrect");
         assert!(
             expected_collateral_shares_delta == calculated_collateral_shares_delta,

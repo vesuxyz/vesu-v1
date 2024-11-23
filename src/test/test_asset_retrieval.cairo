@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod TestAssetRetrieval {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, start_warp};
+    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global};
     use starknet::{contract_address_const, get_block_timestamp};
     use vesu::{
         data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
@@ -33,18 +33,18 @@ mod TestAssetRetrieval {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         assert!(pre_retrieval_balance == pre_deposit_balance + liquidity_to_deposit, "Not transferred to Singleton");
 
-        // retrieve entire balance 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        // retrieve entire balance
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, users.lender, pre_retrieval_balance);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let post_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         let post_retrieval_user_balance = debt_asset.balance_of(users.lender);
@@ -84,9 +84,9 @@ mod TestAssetRetrieval {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
@@ -97,12 +97,12 @@ mod TestAssetRetrieval {
             asset_config_pre_retrieval.reserve == pre_deposit_reserve + liquidity_to_deposit, "Reserve not updated"
         );
 
-        // retrieve % of total balance 
+        // retrieve % of total balance
         let amount_to_retrieve = pre_retrieval_balance / 2;
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, users.lender, amount_to_retrieve);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let post_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         let post_retrieval_user_balance = debt_asset.balance_of(users.lender);
@@ -125,9 +125,9 @@ mod TestAssetRetrieval {
         let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
         let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // deposit collateral which is later borrowed by the borrower
         let params = ModifyPositionParams {
@@ -144,9 +144,9 @@ mod TestAssetRetrieval {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // BORROWER
 
@@ -169,12 +169,12 @@ mod TestAssetRetrieval {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // interest accrued should be reflected since time has passed
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
         let amount_to_retrieve = pre_retrieval_balance / 2;
@@ -183,9 +183,9 @@ mod TestAssetRetrieval {
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, users.lender, amount_to_retrieve);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
             .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
@@ -217,9 +217,9 @@ mod TestAssetRetrieval {
             data: ArrayTrait::new().span()
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let pre_retrieval_balance = debt_asset.balance_of(singleton.contract_address);
@@ -227,8 +227,8 @@ mod TestAssetRetrieval {
 
         let incorrect_caller = contract_address_const::<'incorrect_caller'>();
 
-        start_prank(CheatTarget::One(singleton.contract_address), incorrect_caller);
+        start_cheat_caller_address(singleton.contract_address, incorrect_caller);
         singleton.retrieve_from_reserve(pool_id, debt_asset.contract_address, incorrect_caller, pre_retrieval_balance);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 }
