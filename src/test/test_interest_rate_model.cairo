@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod TestInterestRateModel {
+    use core::num::traits::Bounded;
     use snforge_std::{
         start_cheat_caller_address, stop_cheat_caller_address, ContractClass, start_cheat_block_timestamp_global
     };
@@ -234,11 +235,11 @@ mod TestInterestRateModel {
     }
 
     fn random_fraction(seed: u32) -> u256 {
-        (100_000 * seed.into()) / integer::BoundedInt::<u32>::max().into()
+        (100_000 * seed.into()) / Bounded::<u32>::MAX.into()
     }
 
     fn randrange(min: u256, max: u256, seed: u32) -> u256 {
-        min + ((max - min) * seed.into()) / integer::BoundedInt::<u32>::max().into()
+        min + ((max - min) * seed.into()) / Bounded::<u32>::MAX.into()
     }
 
     #[test]

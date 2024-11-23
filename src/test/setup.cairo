@@ -1,3 +1,4 @@
+use core::num::traits::Bounded;
 use snforge_std::{
     declare, ContractClass, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
     start_cheat_block_timestamp_global, cheat_caller_address, CheatSpan, get_class_hash, DeclareResultTrait
@@ -186,38 +187,38 @@ fn setup_env(
 
     // approve Extension and ExtensionV2 to transfer assets on behalf of creator
     start_cheat_caller_address(collateral_asset.contract_address, users.creator);
-    collateral_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    collateral_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    collateral_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    collateral_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(debt_asset.contract_address, users.creator);
-    debt_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    debt_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    debt_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    debt_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.creator);
-    third_asset.approve(extension.contract_address, integer::BoundedInt::max());
-    third_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    third_asset.approve(extension.contract_address, Bounded::<u256>::MAX);
+    third_asset.approve(extension_v2.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Singleton to transfer assets on behalf of lender
     start_cheat_caller_address(debt_asset.contract_address, users.lender);
-    debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(collateral_asset.contract_address, users.lender);
-    collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.lender);
-    third_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
     // approve Singleton to transfer assets on behalf of borrower
     start_cheat_caller_address(debt_asset.contract_address, users.borrower);
-    debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(debt_asset.contract_address);
     start_cheat_caller_address(collateral_asset.contract_address, users.borrower);
-    collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(collateral_asset.contract_address);
     start_cheat_caller_address(third_asset.contract_address, users.borrower);
-    third_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+    third_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
     stop_cheat_caller_address(third_asset.contract_address);
 
     if oracle_address.is_zero() {

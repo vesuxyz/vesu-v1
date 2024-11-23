@@ -11,7 +11,7 @@
 /// for examples.
 #[starknet::component]
 mod ERC20Component {
-    use integer::BoundedInt;
+    use core::num::traits::Bounded;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use vesu::vendor::erc20 as interface;
@@ -22,8 +22,8 @@ mod ERC20Component {
         ERC20_symbol: felt252,
         ERC20_decimals: u8,
         ERC20_total_supply: u256,
-        ERC20_balances: LegacyMap<ContractAddress, u256>,
-        ERC20_allowances: LegacyMap<(ContractAddress, ContractAddress), u256>,
+        ERC20_balances: starknet::storage::map::Map<ContractAddress, u256>,
+        ERC20_allowances: starknet::storage::map::Map<(ContractAddress, ContractAddress), u256>,
     }
 
     #[event]
@@ -342,7 +342,7 @@ mod ERC20Component {
             ref self: ComponentState<TContractState>, owner: ContractAddress, spender: ContractAddress, amount: u256
         ) {
             let current_allowance = self.ERC20_allowances.read((owner, spender));
-            if current_allowance != BoundedInt::max() {
+            if current_allowance != Bounded::<u256>::MAX {
                 self._approve(owner, spender, current_allowance - amount);
             }
         }

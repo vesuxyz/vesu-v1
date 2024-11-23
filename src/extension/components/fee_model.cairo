@@ -22,7 +22,7 @@ mod fee_model_component {
     #[storage]
     struct Storage {
         // pool_id -> fee configuration
-        fee_configs: LegacyMap::<felt252, FeeConfig>,
+        fee_configs: starknet::storage::map::Map::<felt252, FeeConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

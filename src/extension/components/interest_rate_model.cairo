@@ -118,7 +118,7 @@ mod interest_rate_model_component {
     #[storage]
     struct Storage {
         // (pool_id, asset) -> interest rate configuration
-        interest_rate_configs: LegacyMap::<(felt252, ContractAddress), InterestRateConfig>,
+        interest_rate_configs: starknet::storage::map::Map::<(felt252, ContractAddress), InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

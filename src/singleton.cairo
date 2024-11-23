@@ -183,22 +183,24 @@ mod Singleton {
     struct Storage {
         // tracks a nonce for each creator of a pool to deterministically derive the pool_id from it
         // creator -> nonce
-        creator_nonce: LegacyMap::<ContractAddress, felt252>,
+        creator_nonce: starknet::storage::map::Map::<ContractAddress, felt252>,
         // tracks the address of the extension contract for each pool
         // pool_id -> extension
-        extensions: LegacyMap::<felt252, ContractAddress>,
+        extensions: starknet::storage::map::Map::<felt252, ContractAddress>,
         // tracks the configuration / state of each asset in each pool
         // (pool_id, asset) -> asset configuration
-        asset_configs: LegacyMap::<(felt252, ContractAddress), AssetConfig>,
+        asset_configs: starknet::storage::map::Map::<(felt252, ContractAddress), AssetConfig>,
         // tracks the max. allowed loan-to-value ratio for each asset pairing in each pool
         // (pool_id, collateral_asset, debt_asset) -> ltv configuration
-        ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // tracks the state of each position in each pool
         // (pool_id, collateral_asset, debt_asset, user) -> position
-        positions: LegacyMap::<(felt252, ContractAddress, ContractAddress, ContractAddress), Position>,
+        positions: starknet::storage::map::Map::<
+            (felt252, ContractAddress, ContractAddress, ContractAddress), Position
+        >,
         // tracks the delegation status for each delegator to a delegatee for a specific pool
         // (pool_id, delegator, delegatee) -> delegation
-        delegations: LegacyMap::<(felt252, ContractAddress, ContractAddress), bool>,
+        delegations: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), bool>,
         // tracks the reentrancy lock status to prohibit reentrancy when loading the context or the asset config
         lock: bool,
     }

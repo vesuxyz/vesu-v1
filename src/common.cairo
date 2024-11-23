@@ -1,4 +1,5 @@
 use alexandria_math::i257::{i257, i257_new, U256IntoI257};
+use core::num::traits::WideMul;
 use starknet::get_block_timestamp;
 use vesu::{
     math::{pow_scale}, units::{SCALE, INFLATION_FEE_SHARES},
@@ -34,7 +35,7 @@ fn calculate_nominal_debt(debt: u256, rate_accumulator: u256, asset_scale: u256,
         return 0;
     }
     let rate_accumulator: NonZero<u256> = rate_accumulator.try_into().unwrap();
-    let scaled_debt = integer::u256_wide_mul(debt * SCALE, SCALE);
+    let scaled_debt = WideMul::<u256>::wide_mul(debt * SCALE, SCALE);
     let (nominal_debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_debt, rate_accumulator);
     assert!(nominal_debt.limb2 == 0 && nominal_debt.limb3 == 0, "nominal-debt-overflow");
     let mut nominal_debt = u256 { low: nominal_debt.limb0, high: nominal_debt.limb1 };
@@ -57,7 +58,7 @@ fn calculate_debt(nominal_debt: u256, rate_accumulator: u256, asset_scale: u256,
     if rate_accumulator == 0 {
         return 0;
     }
-    let scaled_nominal_debt = integer::u256_wide_mul(nominal_debt * rate_accumulator, asset_scale);
+    let scaled_nominal_debt = WideMul::<u256>::wide_mul(nominal_debt * rate_accumulator, asset_scale);
     let (debt, remainder) = integer::u512_safe_div_rem_by_u256(scaled_nominal_debt, SCALE.try_into().unwrap());
     assert!(debt.limb2 == 0 && debt.limb3 == 0, "debt-overflow");
     let mut debt = u256 { low: debt.limb0, high: debt.limb1 };
@@ -86,7 +87,7 @@ fn calculate_collateral_shares(collateral: u256, asset_config: AssetConfig, roun
         }
         return safe_div(collateral * SCALE, scale, round_up);
     }
-    let scaled_collateral_mul = integer::u256_wide_mul(collateral * total_collateral_shares, SCALE);
+    let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral * total_collateral_shares, SCALE);
     let total_assets: NonZero<u256> = total_assets.try_into().unwrap();
     let (scaled_collateral_shares, remainder) = integer::u512_safe_div_rem_by_u256(scaled_collateral_mul, total_assets);
     assert!(scaled_collateral_shares.limb2 == 0 && scaled_collateral_shares.limb3 == 0, "collateral-shares-overflow");
@@ -117,7 +118,7 @@ fn calculate_collateral(collateral_shares: u256, asset_config: AssetConfig, roun
     }
     let total_assets = reserve + total_debt;
 
-    let scaled_collateral_mul = integer::u256_wide_mul(collateral_shares * total_assets, SCALE);
+    let scaled_collateral_mul = WideMul::<u256>::wide_mul(collateral_shares * total_assets, SCALE);
     let total_collateral_shares: NonZero<u256> = total_collateral_shares.try_into().unwrap();
     let (scaled_collateral, remainder) = integer::u512_safe_div_rem_by_u256(
         scaled_collateral_mul, total_collateral_shares

@@ -4,7 +4,7 @@ mod map_list_component {
     struct Storage {
         // A list of lists
         // (list id, item) -> next item
-        lists: LegacyMap<(felt252, u64), u64>,
+        lists: starknet::storage::map::Map<(felt252, u64), u64>,
     }
 
     #[event]

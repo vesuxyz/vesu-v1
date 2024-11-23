@@ -230,9 +230,9 @@ mod DefaultExtensionPO {
         // address of the singleton contract
         singleton: ContractAddress,
         // tracks the owner for each pool
-        owner: LegacyMap::<felt252, ContractAddress>,
+        owner: starknet::storage::map::Map::<felt252, ContractAddress>,
         // tracks the name for each pool
-        pool_names: LegacyMap::<felt252, felt252>,
+        pool_names: starknet::storage::map::Map::<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,

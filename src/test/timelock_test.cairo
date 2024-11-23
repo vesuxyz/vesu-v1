@@ -15,8 +15,8 @@ pub(crate) mod TestToken {
 
     #[storage]
     struct Storage {
-        balances: LegacyMap<ContractAddress, u256>,
-        allowances: LegacyMap<(ContractAddress, ContractAddress), u256>,
+        balances: starknet::storage::map::Map<ContractAddress, u256>,
+        allowances: starknet::storage::map::Map<(ContractAddress, ContractAddress), u256>,
     }
 
     #[derive(starknet::Event, PartialEq, Debug, Drop)]

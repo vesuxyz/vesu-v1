@@ -36,7 +36,7 @@ mod pragma_oracle_component {
         oracle_address: ContractAddress,
         summary_address: ContractAddress,
         // (pool_id, asset) -> oracle configuration
-        oracle_configs: LegacyMap::<(felt252, ContractAddress), OracleConfig>,
+        oracle_configs: starknet::storage::map::Map::<(felt252, ContractAddress), OracleConfig>,
     }
 
     #[derive(Drop, starknet::Event)]

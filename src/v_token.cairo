@@ -31,7 +31,7 @@ trait IVToken<TContractState> {
 #[starknet::contract]
 mod VToken {
     use alexandria_math::i257::{i257, i257_new};
-    use integer::BoundedInt;
+    use core::num::traits::Bounded;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, event::EventEmitter};
     use vesu::{
         data_model::{ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetConfig}, units::SCALE,
@@ -115,8 +115,8 @@ mod VToken {
         self.pool_id.write(pool_id);
         self.extension.write(extension);
         self.asset.write(asset);
-        self.erc20._approve(get_contract_address(), extension, BoundedInt::max());
-        IERC20Dispatcher { contract_address: asset }.approve(self.singleton().contract_address, BoundedInt::max());
+        self.erc20._approve(get_contract_address(), extension, Bounded::<u256>::MAX);
+        IERC20Dispatcher { contract_address: asset }.approve(self.singleton().contract_address, Bounded::<u256>::MAX);
         let (asset_config, _) = self.singleton().asset_config(pool_id, asset);
         self.is_legacy.write(asset_config.is_legacy);
     }
@@ -207,7 +207,7 @@ mod VToken {
 
         /// Re-approves the vToken to be spendable by the extension
         fn approve_extension(ref self: ContractState) {
-            self.erc20._approve(get_contract_address(), self.extension.read(), BoundedInt::max());
+            self.erc20._approve(get_contract_address(), self.extension.read(), Bounded::<u256>::MAX);
         }
 
         /// Permissioned minting of vTokens. Can only be called by the associated extension.

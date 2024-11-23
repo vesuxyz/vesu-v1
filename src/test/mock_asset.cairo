@@ -63,7 +63,6 @@ trait IReentrant<TContractState> {
 
 #[starknet::contract]
 mod MockAssetReentrant {
-    use integer::BoundedInt;
     use starknet::{ContractAddress, get_caller_address, call_contract_syscall, get_contract_address};
     use vesu::vendor::erc20_component::ERC20Component;
 
@@ -74,8 +73,8 @@ mod MockAssetReentrant {
         ERC20_symbol: felt252,
         ERC20_decimals: u8,
         ERC20_total_supply: u256,
-        ERC20_balances: LegacyMap<ContractAddress, u256>,
-        ERC20_allowances: LegacyMap<(ContractAddress, ContractAddress), u256>,
+        ERC20_balances: starknet::storage::map::Map<ContractAddress, u256>,
+        ERC20_allowances: starknet::storage::map::Map<(ContractAddress, ContractAddress), u256>,
     }
 
     mod Errors {

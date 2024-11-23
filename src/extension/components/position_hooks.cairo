@@ -92,24 +92,26 @@ mod position_hooks_component {
     struct Storage {
         // contains the shutdown configuration for each pool
         // pool_id -> shutdown configuration
-        shutdown_configs: LegacyMap::<felt252, ShutdownConfig>,
+        shutdown_configs: starknet::storage::map::Map::<felt252, ShutdownConfig>,
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
-        shutdown_ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        shutdown_ltv_configs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
-        liquidation_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
+        liquidation_configs: starknet::storage::map::Map::<
+            (felt252, ContractAddress, ContractAddress), LiquidationConfig
+        >,
         // contains the timestamp for each pair at which the pair first caused violation (triggered recovery mode)
         // (pool_id, collateral asset, debt asset) -> timestamp
-        violation_timestamps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u64>,
+        violation_timestamps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u64>,
         // contains the number of pairs that caused a violation at each timestamp
         // timestamp -> number of items
-        violation_timestamp_counts: LegacyMap::<(felt252, u64), u128>,
+        violation_timestamp_counts: starknet::storage::map::Map::<(felt252, u64), u128>,
         // tracks the total collateral shares and the total nominal debt for each pair
         // (pool_id, collateral asset, debt asset) -> pair configuration
-        pairs: LegacyMap::<(felt252, ContractAddress, ContractAddress), Pair>,
+        pairs: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), Pair>,
         // tracks the debt caps for each asset
-        debt_caps: LegacyMap::<(felt252, ContractAddress, ContractAddress), u256>
+        debt_caps: starknet::storage::map::Map::<(felt252, ContractAddress, ContractAddress), u256>
     }
 
     #[derive(Drop, starknet::Event)]

@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod TestShutdown {
+    use core::num::traits::Bounded;
     use snforge_std::{
         start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global,
         stop_cheat_block_timestamp_global
@@ -1425,10 +1426,10 @@ mod TestShutdown {
         stop_cheat_caller_address(collateral_asset.contract_address);
 
         start_cheat_caller_address(collateral_asset.contract_address, borrower);
-        collateral_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+        collateral_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(collateral_asset.contract_address);
         start_cheat_caller_address(debt_asset.contract_address, borrower);
-        debt_asset.approve(singleton.contract_address, integer::BoundedInt::max());
+        debt_asset.approve(singleton.contract_address, Bounded::<u256>::MAX);
         stop_cheat_caller_address(debt_asset.contract_address);
 
         start_cheat_caller_address(singleton.contract_address, extension.contract_address);

@@ -53,7 +53,9 @@ mod TestUser {
             >()
         };
 
-        replace_bytecode(singleton.contract_address, *declare("Singleton").unwrap().contract_class().class_hash);
+        let _ = replace_bytecode(
+            singleton.contract_address, *declare("Singleton").unwrap().contract_class().class_hash
+        );
 
         let extension = IDefaultExtensionDispatcher {
             contract_address: contract_address_const::<
@@ -61,7 +63,7 @@ mod TestUser {
             >()
         };
 
-        replace_bytecode(
+        let _ = replace_bytecode(
             extension.contract_address, *declare("DefaultExtensionPO").unwrap().contract_class().class_hash
         );
 

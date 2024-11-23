@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod TestVToken {
     use alexandria_math::i257::{i257, i257_new, U256IntoI257};
-    use integer::BoundedInt;
     use snforge_std::{CheatSpan, cheat_caller_address, declare, DeclareResultTrait, ContractClassTrait};
     use starknet::{ContractAddress, get_contract_address, get_caller_address, deploy_syscall, contract_address_const};
     use vesu::{

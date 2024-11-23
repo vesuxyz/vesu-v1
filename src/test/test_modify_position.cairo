@@ -481,7 +481,7 @@ mod TestModifyPosition {
 
     //     // Supply
 
-    //     let amount: u256 = integer::BoundedInt::<u128>::max().into();
+    //     let amount: u256 = Bounded::<u128>::MAX.into();
 
     //     let params = ModifyPositionParams {
     //         pool_id,

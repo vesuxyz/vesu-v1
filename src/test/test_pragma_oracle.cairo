@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod TestPragmaOracle {
+    use core::num::traits::Bounded;
     use core::serde::Serde;
     use snforge_std::{
         start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global, start_cheat_caller_address,
@@ -177,17 +178,18 @@ mod TestPragmaOracle {
 
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
 
-        let max: u128 = integer::BoundedInt::max();
         // set collateral asset price
-        pragma_oracle.set_price(COLL_PRAGMA_KEY, max);
+        pragma_oracle.set_price(COLL_PRAGMA_KEY, Bounded::<u128>::MAX);
         // set debt asset price
-        pragma_oracle.set_price(DEBT_PRAGMA_KEY, max);
+        pragma_oracle.set_price(DEBT_PRAGMA_KEY, Bounded::<u128>::MAX);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
         let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
 
-        assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
-        assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
+        assert!(
+            collateral_asset_price.value == Bounded::<u128>::MAX.into(), "Collateral asset price not correctly set"
+        );
+        assert!(debt_asset_price.value == Bounded::<u128>::MAX.into(), "Debt asset price not correctly set");
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
         assert!(debt_asset_price.is_valid, "Debt asset validity should be true");
 
@@ -363,19 +365,20 @@ mod TestPragmaOracle {
         let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
         let pragma_summary = IMockPragmaSummaryDispatcher { contract_address: default_extension_po.pragma_summary() };
 
-        let max: u128 = integer::BoundedInt::max();
         // set collateral asset price
         pragma_oracle.set_price(COLL_PRAGMA_KEY, 0);
-        pragma_summary.set_twap(COLL_PRAGMA_KEY, max, 18);
+        pragma_summary.set_twap(COLL_PRAGMA_KEY, Bounded::<u128>::MAX, 18);
         // set debt asset price
         pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
-        pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
+        pragma_summary.set_twap(DEBT_PRAGMA_KEY, Bounded::<u128>::MAX, 18);
 
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
         let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
 
-        assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
-        assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
+        assert!(
+            collateral_asset_price.value == Bounded::<u128>::MAX.into(), "Collateral asset price not correctly set"
+        );
+        assert!(debt_asset_price.value == Bounded::<u128>::MAX.into(), "Debt asset price not correctly set");
         assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
         assert!(debt_asset_price.is_valid, "Debt asset validity should be true");
 
