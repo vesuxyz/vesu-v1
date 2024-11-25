@@ -77,22 +77,17 @@ export class Deployer extends BaseDeployer {
     return [contracts, response] as const;
   }
 
+  async deployExtensions(singleton: string, pragma: PragmaConfig) {
+    const [extensionPO, extensionCL, extensionCalls] = await this.deferExtensions(singleton, pragma);
+    const response = await this.execute([...extensionCalls]);
+    await this.waitForTransaction(response.transaction_hash);
+    return [extensionPO, extensionCL, response] as const;
+  }
+
   async deferProtocol(pragma: PragmaConfig) {
     const [singleton, calls1] = await this.deferContract("Singleton");
-    const v_token_class_hash = await this.declareCached("VToken");
-    const calldataPO = CallData.compile({
-      singleton: singleton.address,
-      oracle_address: pragma.oracle!,
-      summary_stats_address: pragma.summary_stats!,
-      v_token_class_hash: v_token_class_hash,
-    });
-    const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);
-    const calldataCL = CallData.compile({
-      singleton: singleton.address,
-      v_token_class_hash: v_token_class_hash,
-    });
-    const [extensionCL, calls3] = await this.deferContract("DefaultExtensionCL", calldataCL);
-    return [{ singleton, extensionPO, extensionCL }, [...calls1, ...calls2, ...calls3]] as const;
+    const [extensionPO, extensionCL, extensionCalls] = await this.deferExtensions(singleton.address, pragma);
+    return [{ singleton, extensionPO, extensionCL }, [...calls1, ...extensionCalls]] as const;
   }
 
   async deployEnv() {
@@ -131,6 +126,23 @@ export class Deployer extends BaseDeployer {
       oracle.populateTransaction.set_price(pragmaKey, price),
     );
     return [oracle, summary_stats, [...oracleCalls, ...summaryStatsCalls, ...setupCalls]] as const;
+  }
+
+  async deferExtensions(singleton: string, pragma: PragmaConfig) {
+    const v_token_class_hash = await this.declareCached("VToken");
+    const calldataPO = CallData.compile({
+      singleton: singleton,
+      oracle_address: pragma.oracle!,
+      summary_stats_address: pragma.summary_stats!,
+      v_token_class_hash: v_token_class_hash,
+    });
+    const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);
+    const calldataCL = CallData.compile({
+      singleton: singleton,
+      v_token_class_hash: v_token_class_hash,
+    });
+    const [extensionCL, calls3] = await this.deferContract("DefaultExtensionCL", calldataCL);
+    return [extensionPO, extensionCL, [...calls2, ...calls3]] as const;
   }
 
   async setApprovals(contract: Contract, assets: Contract[]) {

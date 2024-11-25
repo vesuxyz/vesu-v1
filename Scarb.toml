@@ -38,6 +38,7 @@ deployDevnet = "scarb --profile release build && node --loader ts-node/esm ./scr
 deployMainnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployMainnet.ts"
 deploySepolia = "scarb --profile release build && node --loader ts-node/esm ./scripts/deploySepolia.ts"
 deployTimelock = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployTimelock.ts"
+deployExtensions = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployExtensions.ts"
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
 test = "snforge test --max-n-steps 10000000"
