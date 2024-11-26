@@ -629,8 +629,11 @@ mod DefaultExtensionPO {
 
                     // burn inflation fee
                     let asset = IERC20Dispatcher { contract_address: asset };
-                    asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
-                    asset.approve(singleton.contract_address, INFLATION_FEE);
+                    assert!(
+                        asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE),
+                        "transfer-from-failed"
+                    );
+                    assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
                     singleton
                         .modify_position(
                             ModifyPositionParams {
@@ -743,13 +746,15 @@ mod DefaultExtensionPO {
             let VTokenParams { v_token_name, v_token_symbol } = v_token_params;
             self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
-            ISingletonDispatcher { contract_address: self.singleton.read() }.set_asset_config(pool_id, asset_params);
+            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
+            singleton.set_asset_config(pool_id, asset_params);
 
             // burn inflation fee
-            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
             let asset = IERC20Dispatcher { contract_address: asset };
-            asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE);
-            asset.approve(singleton.contract_address, INFLATION_FEE);
+            assert!(
+                asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE), "transfer-from-failed"
+            );
+            assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
             singleton
                 .modify_position(
                     ModifyPositionParams {
