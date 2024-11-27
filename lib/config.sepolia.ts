@@ -52,7 +52,7 @@ export const config: Config = {
     extensionCL: DEPLOYMENT.extensionCL || "0x0",
     pragma: {
       oracle: DEPLOYMENT.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
-      summary_stats: DEPLOYMENT.summary_stats || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
+      summary_stats: DEPLOYMENT.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
     },
   },
   env,
