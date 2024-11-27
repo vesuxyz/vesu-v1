@@ -1,12 +1,8 @@
 import fs from "fs";
 import { CairoCustomEnum } from "starknet";
-import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
+import CONFIG from "vesu_changelog/configurations/config_genesis_sn_sepolia.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
-
-let DEPLOYMENT: any = {};
-try {
-  DEPLOYMENT = JSON.parse(fs.readFileSync(`deployment-0x534e5f5345504f4c4941.json`, "utf-8"));
-} catch (error) {}
+import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_sepolia.json" assert { type: "json" };
 
 function price(symbol: string) {
   switch (symbol) {
@@ -51,8 +47,8 @@ export const config: Config = {
     extensionPO: DEPLOYMENT.extensionPO || "0x0",
     extensionCL: DEPLOYMENT.extensionCL || "0x0",
     pragma: {
-      oracle: DEPLOYMENT.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
-      summary_stats: DEPLOYMENT.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
+      oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
+      summary_stats: DEPLOYMENT.pragma.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
     },
   },
   env,

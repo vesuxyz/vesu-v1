@@ -56,6 +56,7 @@ export class Deployer extends BaseDeployer {
     const addresses = Object.values(pools)
       .flatMap(({ params }) => params.asset_params.map(({ asset }) => asset))
       .map(this.loadContract.bind(this));
+    console.log(protocol);
     const contracts = {
       singleton: await this.loadContract(protocol.singleton!),
       extensionPO: await this.loadContract(protocol.extensionPO!),
