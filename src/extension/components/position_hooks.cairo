@@ -200,7 +200,11 @@ mod position_hooks_component {
             let LTVConfig { max_ltv } = self
                 .shutdown_ltv_configs
                 .read((context.pool_id, context.collateral_asset, context.debt_asset));
-            is_collateralized(collateral_value, debt_value, max_ltv.into())
+            if max_ltv != 0 {
+                is_collateralized(collateral_value, debt_value, max_ltv.into())
+            } else {
+                true
+            }
         }
 
         /// Sets the debt cap for an asset in a pool.
