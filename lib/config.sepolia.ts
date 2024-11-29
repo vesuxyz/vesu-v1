@@ -1,8 +1,7 @@
-import fs from "fs";
 import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_sepolia.json" assert { type: "json" };
-import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
 import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_sepolia.json" assert { type: "json" };
+import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
 
 function price(symbol: string) {
   switch (symbol) {
