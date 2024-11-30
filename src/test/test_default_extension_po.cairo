@@ -765,7 +765,8 @@ mod TestDefaultExtensionPO {
         create_pool(extension, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'timeout', 5_u64);
+        extension
+            .set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'timeout', 5_u64.into());
         stop_prank(CheatTarget::One(extension.contract_address));
 
         let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
@@ -774,7 +775,7 @@ mod TestDefaultExtensionPO {
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension
             .set_oracle_parameter(
-                config.pool_id, config.collateral_asset.contract_address, 'number_of_sources', 11_u64
+                config.pool_id, config.collateral_asset.contract_address, 'number_of_sources', 11_u64.into()
             );
         stop_prank(CheatTarget::One(extension.contract_address));
 
@@ -791,7 +792,8 @@ mod TestDefaultExtensionPO {
 
         create_pool(extension, config, users.creator, Option::None);
 
-        extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'timeout', 5_u64);
+        extension
+            .set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'timeout', 5_u64.into());
     }
 
     #[test]
@@ -804,7 +806,7 @@ mod TestDefaultExtensionPO {
         create_pool(extension, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'a', 5_u64);
+        extension.set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'a', 5_u64.into());
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 
@@ -818,7 +820,7 @@ mod TestDefaultExtensionPO {
         create_pool(extension, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
-        extension.set_oracle_parameter(config.pool_id, Zeroable::zero(), 'timeout', 5_u64);
+        extension.set_oracle_parameter(config.pool_id, Zeroable::zero(), 'timeout', 5_u64.into());
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 

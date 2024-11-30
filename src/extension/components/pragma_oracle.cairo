@@ -51,7 +51,7 @@ mod pragma_oracle_component {
         pool_id: felt252,
         asset: ContractAddress,
         parameter: felt252,
-        value: u64,
+        value: felt252,
     }
 
     #[event]
@@ -172,15 +172,29 @@ mod pragma_oracle_component {
             pool_id: felt252,
             asset: ContractAddress,
             parameter: felt252,
-            value: u64
+            value: felt252
         ) {
             let mut oracle_config: OracleConfig = self.oracle_configs.read((pool_id, asset));
             assert!(oracle_config.pragma_key != 0, "oracle-config-not-set");
 
-            if parameter == 'timeout' {
-                oracle_config.timeout = value;
+            if parameter == 'pragma_key' {
+                oracle_config.pragma_key = value;
+            } else if parameter == 'timeout' {
+                oracle_config.timeout = value.try_into().unwrap();
             } else if parameter == 'number_of_sources' {
                 oracle_config.number_of_sources = value.try_into().unwrap();
+            } else if parameter == 'start_time_offset' {
+                oracle_config.start_time_offset = value.try_into().unwrap();
+            } else if parameter == 'time_window' {
+                oracle_config.time_window = value.try_into().unwrap();
+            } else if parameter == 'aggregation_mode' {
+                if value == 'Median' {
+                    oracle_config.aggregation_mode = AggregationMode::Median;
+                } else if value == 'Mean' {
+                    oracle_config.aggregation_mode = AggregationMode::Mean;
+                } else {
+                    assert!(false, "invalid-aggregation-mode");
+                }
             } else {
                 assert!(false, "invalid-oracle-parameter");
             }

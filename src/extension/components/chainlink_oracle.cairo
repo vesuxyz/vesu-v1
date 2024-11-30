@@ -37,7 +37,7 @@ mod chainlink_oracle_component {
         pool_id: felt252,
         asset: ContractAddress,
         parameter: felt252,
-        value: u64,
+        value: felt252,
     }
 
     #[event]
@@ -104,15 +104,17 @@ mod chainlink_oracle_component {
             pool_id: felt252,
             asset: ContractAddress,
             parameter: felt252,
-            value: u64
+            value: felt252
         ) {
             let mut chainlink_oracle_config: ChainlinkOracleConfig = self
                 .chainlink_oracle_configs
                 .read((pool_id, asset));
             assert!(chainlink_oracle_config.aggregator != Zeroable::zero(), "chainlink-oracle-config-not-set");
 
-            if parameter == 'timeout' {
-                chainlink_oracle_config.timeout = value;
+            if parameter == 'aggregator' {
+                chainlink_oracle_config.aggregator = value.try_into().unwrap();
+            } else if parameter == 'timeout' {
+                chainlink_oracle_config.timeout = value.try_into().unwrap();
             } else {
                 assert!(false, "invalid-chainlink-oracle-parameter");
             }

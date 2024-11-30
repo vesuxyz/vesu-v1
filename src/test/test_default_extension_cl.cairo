@@ -803,7 +803,7 @@ mod TestDefaultExtensionCL {
     }
 
     #[test]
-    fn test_extension_set_oracle_parameter() {
+    fn test_extension_set_chainlink_oracle_parameter() {
         let Env { extension_v2, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -813,18 +813,29 @@ mod TestDefaultExtensionCL {
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
             .set_chainlink_oracle_parameter(
-                config.pool_id_v2, config.collateral_asset.contract_address, 'timeout', 5_u64
+                config.pool_id_v2, config.collateral_asset.contract_address, 'timeout', 5_u64.into()
             );
         stop_prank(CheatTarget::One(extension_v2.contract_address));
 
         let oracle_config = extension_v2
             .chainlink_oracle_config(config.pool_id_v2, config.collateral_asset.contract_address);
         assert(oracle_config.timeout == 5_u64, 'Oracle parameter not set');
+
+        start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
+        extension_v2
+            .set_chainlink_oracle_parameter(
+                config.pool_id_v2, config.collateral_asset.contract_address, 'aggregator', users.creator.into()
+            );
+        stop_prank(CheatTarget::One(extension_v2.contract_address));
+
+        let oracle_config = extension_v2
+            .chainlink_oracle_config(config.pool_id_v2, config.collateral_asset.contract_address);
+        assert(oracle_config.aggregator == users.creator, 'Oracle parameter not set');
     }
 
     #[test]
     #[should_panic(expected: "caller-not-owner")]
-    fn test_extension_set_oracle_parameter_caller_not_owner() {
+    fn test_extension_set_chainlink_oracle_parameter_caller_not_owner() {
         let Env { extension_v2, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -833,13 +844,13 @@ mod TestDefaultExtensionCL {
 
         extension_v2
             .set_chainlink_oracle_parameter(
-                config.pool_id_v2, config.collateral_asset.contract_address, 'timeout', 5_u64
+                config.pool_id_v2, config.collateral_asset.contract_address, 'timeout', 5_u64.into()
             );
     }
 
     #[test]
     #[should_panic(expected: "invalid-chainlink-oracle-parameter")]
-    fn test_extension_set_oracle_parameter_invalid_oracle_parameter() {
+    fn test_extension_set_chainlink_oracle_parameter_invalid_chainlink_oracle_parameter() {
         let Env { extension_v2, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -848,13 +859,15 @@ mod TestDefaultExtensionCL {
 
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
         extension_v2
-            .set_chainlink_oracle_parameter(config.pool_id_v2, config.collateral_asset.contract_address, 'a', 5_u64);
+            .set_chainlink_oracle_parameter(
+                config.pool_id_v2, config.collateral_asset.contract_address, 'a', 5_u64.into()
+            );
         stop_prank(CheatTarget::One(extension_v2.contract_address));
     }
 
     #[test]
     #[should_panic(expected: "chainlink-oracle-config-not-set")]
-    fn test_extension_set_oracle_parameter_oracle_config_not_set() {
+    fn test_extension_set_chainlink_oracle_parameter_chainlink_oracle_config_not_set() {
         let Env { extension_v2, config, users, .. } = setup_env(
             Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
         );
@@ -862,7 +875,7 @@ mod TestDefaultExtensionCL {
         create_pool_v2(extension_v2, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension_v2.contract_address), users.creator);
-        extension_v2.set_chainlink_oracle_parameter(config.pool_id_v2, Zeroable::zero(), 'timeout', 5_u64);
+        extension_v2.set_chainlink_oracle_parameter(config.pool_id_v2, Zeroable::zero(), 'timeout', 5_u64.into());
         stop_prank(CheatTarget::One(extension_v2.contract_address));
     }
 

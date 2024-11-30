@@ -91,7 +91,7 @@ trait IDefaultExtensionCL<TContractState> {
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
     fn set_chainlink_oracle_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
     );
     fn set_liquidation_config(
         ref self: TContractState,
@@ -718,7 +718,7 @@ mod DefaultExtensionCL {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_chainlink_oracle_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.chainlink_oracle.set_chainlink_oracle_parameter(pool_id, asset, parameter, value);
