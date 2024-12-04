@@ -1,5 +1,7 @@
 import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
+// import CONFIG from "vesu_changelog/configurations/config_re7_xstrk_sn_main.json" assert { type: "json" };
+// import CONFIG from "vesu_changelog/configurations/config_re7_sstrk_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
 
 import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_main.json" assert { type: "json" };
@@ -36,6 +38,9 @@ export const config: Config = {
   pools: {
     "genesis-pool": {
       id: 1n,
+      // id: 3592370751539490711610556844458488648008775713878064059760995781404350938653n, // USDC
+      // id: 2345856225134458665876812536882617294246962319062565703131100435311373119841n, // xSTRK
+      // id: 1301140954640322725373945719229815062445705809076381949099585786202465661889n, // sSTRK
       description: "",
       type: "",
       params: {
@@ -78,7 +83,10 @@ export const config: Config = {
           number_of_sources: BigInt(asset.pragma.number_of_sources),
           start_time_offset: BigInt(asset.pragma.start_time_offset),
           time_window: BigInt(asset.pragma.time_window),
-          aggregation_mode: new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined }),
+          aggregation_mode:
+            (asset.pragma.aggregation_mode == "median" || asset.pragma.aggregation_mode == "Median")
+              ? new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined })
+              : new CairoCustomEnum({ Median: undefined, Mean: {}, Error: undefined }),
         })),
         liquidation_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(
