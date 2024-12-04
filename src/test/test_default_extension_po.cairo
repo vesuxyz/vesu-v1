@@ -770,7 +770,7 @@ mod TestDefaultExtensionPO {
         stop_prank(CheatTarget::One(extension.contract_address));
 
         let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
-        assert(oracle_config.timeout == 5_u64, 'Oracle parameter not set');
+        assert(oracle_config.timeout == 5_u64, 'timeout not set');
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension
@@ -780,7 +780,45 @@ mod TestDefaultExtensionPO {
         stop_prank(CheatTarget::One(extension.contract_address));
 
         let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
-        assert(oracle_config.number_of_sources == 11, 'Oracle parameter not set');
+        assert(oracle_config.number_of_sources == 11, 'number_of_sources not set');
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension
+            .set_oracle_parameter(
+                config.pool_id, config.collateral_asset.contract_address, 'start_time_offset', 10_u64.into()
+            );
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
+        assert(oracle_config.start_time_offset == 10, 'start_time_offset not set');
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension
+            .set_oracle_parameter(
+                config.pool_id, config.collateral_asset.contract_address, 'time_window', 10_u64.into()
+            );
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
+        assert(oracle_config.time_window == 10, 'time_window not set');
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension
+            .set_oracle_parameter(
+                config.pool_id, config.collateral_asset.contract_address, 'aggregation_mode', 'Mean'.into()
+            );
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
+        assert(oracle_config.aggregation_mode == AggregationMode::Mean, 'aggregation_mode not set');
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension
+            .set_oracle_parameter(config.pool_id, config.collateral_asset.contract_address, 'pragma_key', '123'.into());
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let oracle_config = extension.oracle_config(config.pool_id, config.collateral_asset.contract_address);
+        assert(oracle_config.pragma_key == '123', 'pragma_key not set');
     }
 
     #[test]
@@ -821,6 +859,23 @@ mod TestDefaultExtensionPO {
 
         start_prank(CheatTarget::One(extension.contract_address), users.creator);
         extension.set_oracle_parameter(config.pool_id, Zeroable::zero(), 'timeout', 5_u64.into());
+        stop_prank(CheatTarget::One(extension.contract_address));
+    }
+
+    #[test]
+    #[should_panic(expected: "time-window-must-be-less-than-start-time-offset")]
+    fn test_extension_set_oracle_parameter_time_window_greater_than_start_time_offset() {
+        let Env { extension, config, users, .. } = setup_env(
+            Zeroable::zero(), Zeroable::zero(), Zeroable::zero(), Zeroable::zero()
+        );
+
+        create_pool(extension, config, users.creator, Option::None);
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension
+            .set_oracle_parameter(
+                config.pool_id, config.collateral_asset.contract_address, 'time_window', 1_u64.into()
+            );
         stop_prank(CheatTarget::One(extension.contract_address));
     }
 

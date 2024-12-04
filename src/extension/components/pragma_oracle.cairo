@@ -13,9 +13,7 @@ struct OracleConfig {
 fn assert_oracle_config(oracle_config: OracleConfig) {
     assert!(oracle_config.pragma_key != 0, "pragma-key-must-be-set");
     assert!(
-        (oracle_config.start_time_offset == 0 && oracle_config.time_window == 0)
-            || (oracle_config.start_time_offset != 0 && oracle_config.time_window != 0),
-        "pragma-start-time-and-time-window-must-be-set-together"
+        oracle_config.time_window <= oracle_config.start_time_offset, "time-window-must-be-less-than-start-time-offset"
     );
 }
 
