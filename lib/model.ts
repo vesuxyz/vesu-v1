@@ -39,6 +39,9 @@ export interface PragmaOracleParams {
   pragma_key: BigNumberish;
   timeout: bigint;
   number_of_sources: bigint;
+  start_time_offset: bigint;
+  time_window: bigint;
+  aggregation_mode: CairoCustomEnum;
 }
 
 export interface InterestRateConfig {

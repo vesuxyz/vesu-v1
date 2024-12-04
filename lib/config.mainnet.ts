@@ -14,7 +14,7 @@ const env = CONFIG.asset_parameters.map(
       asset.pragma.pragma_key,
       0n,
       asset.token.is_legacy,
-      BigInt(asset.fee_rate),
+      toScale(asset.fee_rate),
       asset.v_token.v_token_name,
       asset.v_token.v_token_symbol,
       asset.token.address,
@@ -76,9 +76,9 @@ export const config: Config = {
           pragma_key: asset.pragma.pragma_key,
           timeout: BigInt(asset.pragma.timeout),
           number_of_sources: BigInt(asset.pragma.number_of_sources),
-          start_time_offset: 0n, // BigInt(asset.pragma.start_time_offset),
-          time_window: 0n, // BigInt(asset.pragma.time_window),
-          aggregation_mode: new CairoCustomEnum({ Median: {} }), // new CairoCustomEnum({ [(asset.pragma.aggregation_mode == 0) ? "Median" : "Error"]: {} })
+          start_time_offset: BigInt(asset.pragma.start_time_offset),
+          time_window: BigInt(asset.pragma.time_window),
+          aggregation_mode: new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined }),
         })),
         liquidation_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(

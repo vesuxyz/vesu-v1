@@ -78,7 +78,7 @@ function stringifyAddresses(value: any): any {
   if (isArray(value)) {
     return value.map(stringifyAddresses);
   }
-  return value?.address ? value.address : value;
+  return value?.address ? value.address : value.oracle.address;
 }
 
 export function mapAssetPairs<T>(
