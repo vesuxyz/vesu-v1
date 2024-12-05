@@ -9,7 +9,7 @@
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.10.5",
     "bignumber.js": "9.1.2",
-    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#9a91cce7ed3adfee6fd5a9580e4005303a67b57a",
+    "vesu_changelog": "https://github.com/vesuxyz/changelog.git#8993a2b5f2624201776535f99b5a7b7e00bef2f0",
     "dotenv": "^16.3.1",
     "lodash-es": "^4.17.21",
     "prettier": "^3.1.1",

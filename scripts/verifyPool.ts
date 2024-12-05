@@ -101,3 +101,33 @@ for (const [index, asset] of assets.entries()) {
   assert((await singleton.rate_accumulator_unsafe(pool.id, asset.address)) > 0n, "rate_accumulator-neq");
   assert((await singleton.utilization_unsafe(pool.id, asset.address)) >= 0n, "utilization-neq");
 }
+
+for (const [, asset] of pool.params.ltv_params.entries()) {
+  let collateral_asset = assets[asset.collateral_asset_index];
+  let debt_asset = assets[asset.debt_asset_index];
+  let ltv_config = await singleton.ltv_config(pool.id, collateral_asset.address, debt_asset.address);
+  assert(ltv_config.max_ltv === asset.max_ltv, "max_ltv-neq");
+}
+
+for (const [, asset] of pool.params.liquidation_params.entries()) {
+  let collateral_asset = assets[asset.collateral_asset_index];
+  let debt_asset = assets[asset.debt_asset_index];
+  let liquidation_config = await extensionPO.liquidation_config(pool.id, collateral_asset.address, debt_asset.address);
+  assert(liquidation_config.liquidation_factor === asset.liquidation_factor, "liquidation_factor-neq");
+}
+
+for (const [, asset] of pool.params.debt_caps_params.entries()) {
+  let collateral_asset = assets[asset.collateral_asset_index];
+  let debt_asset = assets[asset.debt_asset_index];
+  assert(
+    (await extensionPO.debt_caps(pool.id, collateral_asset.address, debt_asset.address)) === asset.debt_cap,
+    "debt_cap-neq",
+  );
+}
+
+for (const [, asset] of pool.params.shutdown_params.ltv_params.entries()) {
+  let collateral_asset = assets[asset.collateral_asset_index];
+  let debt_asset = assets[asset.debt_asset_index];
+  let ltv_config = await extensionPO.shutdown_ltv_config(pool.id, collateral_asset.address, debt_asset.address);
+  assert(ltv_config.max_ltv === asset.max_ltv, "shutdown_max_ltv-neq");
+}

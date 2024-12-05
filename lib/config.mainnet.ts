@@ -1,5 +1,6 @@
 import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
+// import CONFIG from "vesu_changelog/configurations/config_re7_usdc_sn_main.json" assert { type: "json" };
 // import CONFIG from "vesu_changelog/configurations/config_re7_xstrk_sn_main.json" assert { type: "json" };
 // import CONFIG from "vesu_changelog/configurations/config_re7_sstrk_sn_main.json" assert { type: "json" };
 import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
@@ -38,9 +39,10 @@ export const config: Config = {
   pools: {
     "genesis-pool": {
       id: 1n,
-      // id: 3592370751539490711610556844458488648008775713878064059760995781404350938653n, // USDC
-      // id: 2345856225134458665876812536882617294246962319062565703131100435311373119841n, // xSTRK
-      // id: 1301140954640322725373945719229815062445705809076381949099585786202465661889n, // sSTRK
+      // id: 2198503327643286920898110335698706244522220458610657370981979460625005526824n, // Genesis Pool
+      // id: 3592370751539490711610556844458488648008775713878064059760995781404350938653n, // Re7 USDC
+      // id: 2345856225134458665876812536882617294246962319062565703131100435311373119841n, // Re7 xSTRK
+      // id: 1301140954640322725373945719229815062445705809076381949099585786202465661889n, // Re7 sSTRK
       description: "",
       type: "",
       params: {
@@ -116,7 +118,7 @@ export const config: Config = {
             const debt_asset_index = CONFIG.asset_parameters.findIndex(
               (asset: any) => asset.asset_name === pair.debt_asset_name,
             );
-            return { collateral_asset_index, debt_asset_index, max_ltv: 90n * PERCENT };
+            return { collateral_asset_index, debt_asset_index, max_ltv: toScale(pair.shutdown_ltv) };
           }),
         },
         fee_params: { fee_recipient: CONFIG.pool_parameters.fee_recipient },
