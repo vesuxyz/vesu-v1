@@ -44,6 +44,7 @@ mod test {
     mod test_default_extension_po;
     mod test_flash_loan;
     mod test_forking;
+    mod test_integration;
     mod test_interest_rate_model;
     mod test_liquidate_position;
     mod test_map_list;

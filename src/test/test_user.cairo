@@ -14,10 +14,12 @@ fn to_percent(value: u256) -> u64 {
 mod TestUser {
     use alexandria_math::i257::{i257, i257_new};
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, replace_bytecode
+        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, replace_bytecode,
+        get_class_hash
     };
     use starknet::{
-        contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp
+        ClassHash, contract_address_const, get_caller_address, get_contract_address, ContractAddress,
+        get_block_timestamp
     };
     use super::{IStarkgateERC20Dispatcher, IStarkgateERC20DispatcherTrait, to_percent};
     use vesu::{
@@ -42,68 +44,89 @@ mod TestUser {
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, LiquidatePositionParams},
     };
 
+    // block number: 952420
     #[test]
     #[available_gas(2000000)]
     #[fork("Mainnet")]
     fn test_user() {
         let singleton = ISingletonDispatcher {
             contract_address: contract_address_const::<
-                0x297ef4c12810695c5d91e28b8ee5c5af430076fa8c40a45d31b48da54de372e
+                0x2545b2e5d519fc230e9cd781046d3a64e092114f07e44771e0d719d148725ef
             >()
         };
 
-        replace_bytecode(singleton.contract_address, declare("Singleton").class_hash);
+        replace_bytecode(
+            singleton.contract_address, // declare("Singleton").class_hash
+             get_class_hash(singleton.contract_address)
+        );
 
         let extension = IDefaultExtensionDispatcher {
             contract_address: contract_address_const::<
-                0x1008cf6e9f48c6b23121b340e2e84c5a6df0ab3a46d4886df71bdd6d16fcf69
+                0x2ded44e2c575671dedb6227ba8bfed340252f3cb0476982074567c0670442f7
             >()
         };
 
-        replace_bytecode(extension.contract_address, declare("DefaultExtensionPO").class_hash);
+        replace_bytecode(
+            extension.contract_address,
+            declare("DefaultExtensionPO").class_hash // get_class_hash(extension.contract_address)
+        );
 
-        let pool_id = 3601893553453722691657585476026095435475878278287859441667450345178654480585;
+        let pool_id = 3488439889760078773862061392337242708358978534574204613763925972476552399332;
         let collateral_asset = IERC20Dispatcher {
             contract_address: contract_address_const::<
-                0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8
+                0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7 // eth
             >()
         };
         let debt_asset = IERC20Dispatcher {
             contract_address: contract_address_const::<
-                0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac
+                0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8 // usdc
             >()
         };
-        let user = contract_address_const::<0x075324D453cF0B57D1242602D349040A6D5E0D8a6b118953afA7C1bf17ba53F8>();
+        // let user = contract_address_const::<0x11b6e878cc575025b488b2e7af5f58f9df99b9f9aa03f22f932ae0b69a955f1>();
+        let user = contract_address_const::<0x03d92A8137e51eeE44B8Fb450d90f2CdA085B2568562c1B8695cBF11c06f9c8d>();
 
-        let (position, _, _) = singleton
-            .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, user);
+        // let (position, _, _) = singleton
+        //     .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, user);
+
+        println!("balance: {}", collateral_asset.balance_of(user));
+
+        start_prank(CheatTarget::One(collateral_asset.contract_address), user);
+        collateral_asset.approve(singleton.contract_address, 100 * SCALE);
+        stop_prank(CheatTarget::One(collateral_asset.contract_address));
 
         start_prank(CheatTarget::One(singleton.contract_address), user);
         singleton
-            .transfer_position(
-                TransferPositionParams {
+            .modify_position(
+                ModifyPositionParams {
                     pool_id,
-                    from_collateral_asset: collateral_asset.contract_address,
-                    from_debt_asset: debt_asset.contract_address,
-                    to_collateral_asset: collateral_asset.contract_address,
-                    to_debt_asset: Zeroable::zero(),
-                    from_user: user,
-                    to_user: extension.contract_address,
-                    collateral: UnsignedAmount {
+                    collateral_asset: collateral_asset.contract_address,
+                    debt_asset: debt_asset.contract_address,
+                    user,
+                    collateral: Amount { // 0.04 ETH
                         amount_type: AmountType::Delta,
-                        denomination: AmountDenomination::Native,
-                        value: position.collateral_shares,
+                        denomination: AmountDenomination::Assets,
+                        value: 40000000000000000.into(),
                     },
                     debt: Default::default(),
-                    from_data: ArrayTrait::new().span(),
-                    to_data: ArrayTrait::new().span(),
+                    data: ArrayTrait::new().span(),
+                }
+            );
+        singleton
+            .modify_position(
+                ModifyPositionParams {
+                    pool_id,
+                    collateral_asset: collateral_asset.contract_address,
+                    debt_asset: debt_asset.contract_address,
+                    user,
+                    collateral: Default::default(),
+                    debt: Amount { // 10 USDC
+                        amount_type: AmountType::Delta,
+                        denomination: AmountDenomination::Assets,
+                        value: 10000000.into(),
+                    },
+                    data: ArrayTrait::new().span(),
                 }
             );
         stop_prank(CheatTarget::One(singleton.contract_address));
-    // let wbtc = contract_address_const::<0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac>();
-
-    // let collateral_shares = singleton.calculate_collateral_shares(
-    //     pool_id, wbtc, i257_new(270738, false)
-    // );
     }
 }
