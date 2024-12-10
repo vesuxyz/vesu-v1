@@ -3,7 +3,7 @@ import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" a
 // import CONFIG from "vesu_changelog/configurations/config_re7_usdc_sn_main.json" assert { type: "json" };
 // import CONFIG from "vesu_changelog/configurations/config_re7_xstrk_sn_main.json" assert { type: "json" };
 // import CONFIG from "vesu_changelog/configurations/config_re7_sstrk_sn_main.json" assert { type: "json" };
-import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
+import { Config, EnvAssetParams, SCALE, toScale, toUtilizationScale } from ".";
 
 import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_main.json" assert { type: "json" };
 
@@ -86,7 +86,7 @@ export const config: Config = {
           start_time_offset: BigInt(asset.pragma.start_time_offset),
           time_window: BigInt(asset.pragma.time_window),
           aggregation_mode:
-            (asset.pragma.aggregation_mode == "median" || asset.pragma.aggregation_mode == "Median")
+            asset.pragma.aggregation_mode == "median" || asset.pragma.aggregation_mode == "Median"
               ? new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined })
               : new CairoCustomEnum({ Median: undefined, Mean: {}, Error: undefined }),
         })),

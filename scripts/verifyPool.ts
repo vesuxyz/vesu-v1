@@ -13,10 +13,9 @@ assert(
   toAddress(await extensionPO.pragma_oracle()) === protocol.pragma.oracle.address.toLowerCase(),
   "pragma_oracle-neq",
 );
-assert(await extensionPO.pool_owner(pool.id) === BigInt(pool.params.owner.toLowerCase()), "pool_owner-neq");
+assert((await extensionPO.pool_owner(pool.id)) === BigInt(pool.params.owner.toLowerCase()), "pool_owner-neq");
 assert(
-  (await extensionPO.fee_config(pool.id)).fee_recipient ===
-    BigInt(pool.params.fee_params.fee_recipient.toLowerCase()),
+  (await extensionPO.fee_config(pool.id)).fee_recipient === BigInt(pool.params.fee_params.fee_recipient.toLowerCase()),
   "fee_recipient-neq",
 );
 const shutdown_config = await extensionPO.shutdown_config(pool.id);
