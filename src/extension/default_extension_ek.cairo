@@ -13,14 +13,13 @@ use vesu::{
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct EkuboOracleParams {
-    oracle_pool: ContractAddress, // Ekubo Oracle pool address
-    quote_token: ContractAddress,
     period: u64 // [seconds]
 }
 
 #[starknet::interface]
 trait IDefaultExtensionEK<TContractState> {
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
+    fn ekubo_oracle(self: @TContractState) -> ContractAddress;
     fn ekubo_oracle_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> EkuboOracleConfig;
     fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
@@ -146,6 +145,7 @@ mod DefaultExtensionEK {
                 tokenization::{tokenization_component, tokenization_component::TokenizationTrait}
             }
         },
+        vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait},
     };
 
     component!(path: position_hooks_component, storage: position_hooks, event: PositionHooksEvents);
@@ -202,8 +202,18 @@ mod DefaultExtensionEK {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, singleton: ContractAddress, v_token_class_hash: felt252) {
+    fn constructor(
+        ref self: ContractState,
+        singleton: ContractAddress,
+        core: ContractAddress,
+        oracle_address: ContractAddress,
+        quote_asset: ContractAddress,
+        v_token_class_hash: felt252
+    ) {
         self.singleton.write(singleton);
+        self.ekubo_oracle.set_core(core);
+        self.ekubo_oracle.set_oracle(oracle_address);
+        self.ekubo_oracle.set_quote_asset(quote_asset);
         self.tokenization.set_v_token_class_hash(v_token_class_hash);
     }
 
@@ -271,6 +281,13 @@ mod DefaultExtensionEK {
         /// * `owner` - address of the owner
         fn pool_owner(self: @ContractState, pool_id: felt252) -> ContractAddress {
             self.owner.read(pool_id)
+        }
+
+        /// Returns the address of the Ekubo oracle extension contract
+        /// # Returns
+        /// * `oracle_address` - address of the Ekubo oracle extension contract
+        fn ekubo_oracle(self: @ContractState) -> ContractAddress {
+            self.ekubo_oracle.oracle_address()
         }
 
         /// Returns the Ekubo oracle configuration for a given pool and asset
@@ -470,14 +487,16 @@ mod DefaultExtensionEK {
             while !asset_params_copy
                 .is_empty() {
                     let asset = *asset_params_copy.pop_front().unwrap().asset;
+                    assert!(asset != self.ekubo_oracle.quote_asset(), "add-quote-asset-disallowed");
+                    let asset_decimals = IERC20MetadataDispatcher { contract_address: asset }.decimals();
 
                     // set the oracle config
                     let params = *ekubo_oracle_params.pop_front().unwrap();
-                    let EkuboOracleParams { oracle_pool, quote_token, period } = params;
+                    let EkuboOracleParams { period } = params;
                     self
                         .ekubo_oracle
                         .set_ekubo_oracle_config(
-                            pool_id, asset, EkuboOracleConfig { oracle_pool, quote_token, period }
+                            pool_id, asset, EkuboOracleConfig { decimals: asset_decimals, period }
                         );
 
                     // set the interest rate model configuration
@@ -553,18 +572,14 @@ mod DefaultExtensionEK {
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
+            assert!(asset != self.ekubo_oracle.quote_asset(), "add-quote-asset-disallowed");
+            let asset_decimals = IERC20MetadataDispatcher { contract_address: asset }.decimals();
 
             // set the oracle config
             self
                 .ekubo_oracle
                 .set_ekubo_oracle_config(
-                    pool_id,
-                    asset,
-                    EkuboOracleConfig {
-                        oracle_pool: ekubo_oracle_params.oracle_pool,
-                        quote_token: ekubo_oracle_params.quote_token,
-                        period: ekubo_oracle_params.period
-                    }
+                    pool_id, asset, EkuboOracleConfig { decimals: asset_decimals, period: ekubo_oracle_params.period }
                 );
 
             // set the debt cap
