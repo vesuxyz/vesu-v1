@@ -44,7 +44,7 @@ mod ekubo_oracle_component {
         pool_id: felt252,
         asset: ContractAddress,
         parameter: felt252,
-        value: u64,
+        value: felt252,
     }
 
     #[event]
@@ -168,14 +168,14 @@ mod ekubo_oracle_component {
             pool_id: felt252,
             asset: ContractAddress,
             parameter: felt252,
-            value: u64
+            value: felt252
         ) {
             let mut ekubo_oracle_config: EkuboOracleConfig = self.ekubo_oracle_configs.read((pool_id, asset));
             assert!(ekubo_oracle_config.period.is_non_zero(), "ekubo-oracle-config-not-set");
 
             if parameter == 'period' {
                 assert!(value != 0, "invalid-ekubo-oracle-period-value");
-                ekubo_oracle_config.period = value;
+                ekubo_oracle_config.period = value.try_into().unwrap();
             } else {
                 assert!(false, "invalid-ekubo-oracle-parameter");
             }

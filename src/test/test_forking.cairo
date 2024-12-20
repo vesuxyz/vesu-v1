@@ -12,7 +12,9 @@ fn to_percent(value: u256) -> u64 {
 
 #[cfg(test)]
 mod TestForking {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp};
+    use snforge_std::{
+        start_prank, stop_prank, CheatTarget, store, load, map_entry_address, declare, start_warp, prank, CheatSpan
+    };
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, ContractAddress, get_block_timestamp,
         get_block_number
@@ -26,7 +28,8 @@ mod TestForking {
         },
         vendor::{
             erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
-            chainlink::{IChainlinkAggregatorDispatcher, IChainlinkAggregatorDispatcherTrait, Round}
+            chainlink::{IChainlinkAggregatorDispatcher, IChainlinkAggregatorDispatcherTrait, Round},
+            pragma::{AggregationMode}
         },
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
@@ -39,8 +42,11 @@ mod TestForking {
             },
             components::position_hooks::LiquidationData
         },
-        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
-        data_model::{AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice},
+        units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
+        data_model::{
+            AssetParams, LTVParams, ModifyPositionParams, Amount, AmountType, AmountDenomination, AssetPrice,
+            DebtCapParams
+        },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait, LiquidatePositionParams},
     };
 
@@ -177,6 +183,45 @@ mod TestForking {
         liquidation_params.span()
     }
 
+    fn generate_debt_caps_for_pairs(
+        all_asset_params: Span<AssetParams>, default_debt_cap: u256
+    ) -> Span<DebtCapParams> {
+        let mut pair_debt_caps: Array<DebtCapParams> = array![];
+
+        let mut i = 0;
+        loop {
+            match all_asset_params.get(i) {
+                Option::Some(boxed_asset_params) => {
+                    let mut asset_params = *boxed_asset_params.unbox();
+                    let mut j = 0;
+                    loop {
+                        match all_asset_params.get(j) {
+                            Option::Some(boxed_paired_asset_params) => {
+                                let mut paired_asset_params = *boxed_paired_asset_params.unbox();
+                                if asset_params.asset != paired_asset_params.asset {
+                                    pair_debt_caps
+                                        .append(
+                                            DebtCapParams {
+                                                collateral_asset_index: i,
+                                                debt_asset_index: j,
+                                                debt_cap: default_debt_cap
+                                            }
+                                        );
+                                }
+                            },
+                            Option::None(_) => { break; }
+                        };
+                        j += 1;
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+            i += 1;
+        };
+
+        pair_debt_caps.span()
+    }
+
     fn generate_shutdown_params(all_asset_params: Span<AssetParams>) -> ShutdownParams {
         let mut shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS * 30,
@@ -191,6 +236,9 @@ mod TestForking {
         let pragma_oracle_address = contract_address_const::<
             0x2a85bd616f912537c50a49a4076db02c00b29b2cdc8a197ce92ed1837fa875b
         >();
+        let summary_stats_address = contract_address_const::<
+            0x049eefafae944d07744d07cc72a5bf14728a6fb463c3eae5bca13552f5d455fd
+        >();
 
         let eth_asset_params = AssetParams {
             asset: contract_address_const::<0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7>(),
@@ -202,7 +250,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let eth_asset_oracle_params = PragmaOracleParams { pragma_key: 'ETH/USD', timeout: 0, number_of_sources: 0 };
+        let eth_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'ETH/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let eth_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Ethereum', v_token_symbol: 'vETH' };
 
@@ -216,7 +271,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let wbtc_asset_oracle_params = PragmaOracleParams { pragma_key: 'WBTC/USD', timeout: 0, number_of_sources: 0 };
+        let wbtc_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'WBTC/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let wbtc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Wrapped Bitcoin', v_token_symbol: 'vWBTC' };
 
@@ -230,7 +292,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let usdc_asset_oracle_params = PragmaOracleParams { pragma_key: 'USDC/USD', timeout: 0, number_of_sources: 2 };
+        let usdc_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'USDC/USD',
+            timeout: 0,
+            number_of_sources: 2,
+            start_time_offset: 86400 * 7,
+            time_window: 86400 * 6,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let usdc_asset_v_token_params = VTokenParams { v_token_name: 'Vesu USD Coin', v_token_symbol: 'vUSDC' };
 
@@ -244,7 +313,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let usdt_asset_oracle_params = PragmaOracleParams { pragma_key: 'USDT/USD', timeout: 0, number_of_sources: 0 };
+        let usdt_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'USDT/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let usdt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Tether', v_token_symbol: 'vUSDT' };
 
@@ -259,7 +335,12 @@ mod TestForking {
         };
 
         let wsteth_asset_oracle_params = PragmaOracleParams {
-            pragma_key: 'WSTETH/USD', timeout: 0, number_of_sources: 0
+            pragma_key: 'WSTETH/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
 
         let wsteth_asset_v_token_params = VTokenParams {
@@ -276,7 +357,14 @@ mod TestForking {
             fee_rate: 0
         };
 
-        let strk_asset_oracle_params = PragmaOracleParams { pragma_key: 'STRK/USD', timeout: 0, number_of_sources: 0 };
+        let strk_asset_oracle_params = PragmaOracleParams {
+            pragma_key: 'STRK/USD',
+            timeout: 0,
+            number_of_sources: 0,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let strk_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Starknet', v_token_symbol: 'vSTRK' };
 
@@ -421,6 +509,7 @@ mod TestForking {
 
         let interest_rate_configs = generate_interest_rate_configs(asset_params);
         let liquidation_params = generate_liquidation_params(asset_params, ((9 * SCALE) / 10).try_into().unwrap());
+        let debt_caps_params = generate_debt_caps_for_pairs(asset_params, 0);
         let shutdown_params = generate_shutdown_params(asset_params);
 
         let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
@@ -434,42 +523,17 @@ mod TestForking {
         let extension = IDefaultExtensionDispatcher {
             contract_address: deploy_with_args(
                 "DefaultExtensionPO",
-                array![singleton.contract_address.into(), pragma_oracle_address.into(), v_token_class_hash.into()]
+                array![
+                    singleton.contract_address.into(),
+                    pragma_oracle_address.into(),
+                    summary_stats_address.into(),
+                    v_token_class_hash.into()
+                ]
             )
         };
 
-        let creator = get_caller_address();
-        let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
-
-        extension
-            .create_pool(
-                asset_params,
-                v_token_params,
-                max_ltv_params,
-                interest_rate_configs,
-                oracle_params,
-                liquidation_params,
-                shutdown_params,
-                FeeParams { fee_recipient: creator },
-                creator
-            );
-
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
-
-        let mut i = 0;
-        loop {
-            match asset_params.get(i) {
-                Option::Some(boxed_asset_params) => {
-                    let mut asset_params = *boxed_asset_params.unbox();
-                    let price = IExtensionDispatcher { contract_address: extension.contract_address }
-                        .price(pool_id, asset_params.asset);
-                    assert!(price.value > 0, "No data");
-                },
-                Option::None(_) => { break; }
-            };
-            i += 1;
-        };
-
+        // get funds
+        let creator = contract_address_const::<'creator'>();
         let supplier = contract_address_const::<'supplier'>();
         let borrower = contract_address_const::<'borrower'>();
         let liquidator = contract_address_const::<'liquidator'>();
@@ -489,7 +553,24 @@ mod TestForking {
             .permissioned_mint(borrower, borrow_amount_eth * 2);
         IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
             .permissioned_mint(liquidator, borrow_amount_eth);
+        IStarkgateERC20Dispatcher { contract_address: eth_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
         stop_prank(CheatTarget::One(eth_asset_params.asset));
+        start_prank(CheatTarget::One(eth.contract_address), creator);
+        eth.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(eth.contract_address));
+
+        let btc_asset_params: AssetParams = *asset_params[1];
+        let btc = ERC20ABIDispatcher { contract_address: btc_asset_params.asset };
+        let loaded = load(btc_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(btc_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: btc_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(btc_asset_params.asset));
+        start_prank(CheatTarget::One(btc.contract_address), creator);
+        btc.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(btc.contract_address));
 
         let usdc_asset_params: AssetParams = *asset_params[2];
         let usdc = ERC20ABIDispatcher { contract_address: usdc_asset_params.asset };
@@ -500,7 +581,89 @@ mod TestForking {
             .permissioned_mint(supplier, supply_amount_usdc);
         IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
             .permissioned_mint(borrower, borrow_amount_usdc);
+        IStarkgateERC20Dispatcher { contract_address: usdc_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
         stop_prank(CheatTarget::One(usdc_asset_params.asset));
+        start_prank(CheatTarget::One(usdc.contract_address), creator);
+        usdc.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdc.contract_address));
+
+        let usdt_asset_params: AssetParams = *asset_params[3];
+        let usdt = ERC20ABIDispatcher { contract_address: usdt_asset_params.asset };
+        let loaded = load(usdt_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(usdt_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: usdt_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdt_asset_params.asset));
+        start_prank(CheatTarget::One(usdt.contract_address), creator);
+        usdt.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(usdt.contract_address));
+
+        let strk_asset_params: AssetParams = *asset_params[4];
+        let strk = ERC20ABIDispatcher { contract_address: strk_asset_params.asset };
+        let loaded = load(strk_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(strk_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: strk_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(strk_asset_params.asset));
+        start_prank(CheatTarget::One(strk.contract_address), creator);
+        strk.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(strk.contract_address));
+
+        let wsteth_asset_params: AssetParams = *asset_params[5];
+        let wsteth = ERC20ABIDispatcher { contract_address: wsteth_asset_params.asset };
+        let loaded = load(wsteth_asset_params.asset, selector!("permitted_minter"), 1);
+        let minter: ContractAddress = (*loaded[0]).try_into().unwrap();
+        start_prank(CheatTarget::One(wsteth_asset_params.asset), minter);
+        IStarkgateERC20Dispatcher { contract_address: wsteth_asset_params.asset }
+            .permissioned_mint(creator, INFLATION_FEE);
+        stop_prank(CheatTarget::One(wsteth_asset_params.asset));
+        start_prank(CheatTarget::One(wsteth.contract_address), creator);
+        wsteth.approve(extension.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(wsteth.contract_address));
+
+        let pool_id = singleton.calculate_pool_id(extension.contract_address, 1);
+
+        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
+        extension
+            .create_pool(
+                'DefaultExtensionPO',
+                asset_params,
+                v_token_params,
+                max_ltv_params,
+                interest_rate_configs,
+                oracle_params,
+                liquidation_params,
+                debt_caps_params,
+                shutdown_params,
+                FeeParams { fee_recipient: creator },
+                creator
+            );
+        stop_prank(CheatTarget::One(extension.contract_address));
+
+        let mut i = 0;
+        loop {
+            match asset_params.get(i) {
+                Option::Some(boxed_asset_params) => {
+                    let mut asset_params = *boxed_asset_params.unbox();
+                    let price = IExtensionDispatcher { contract_address: extension.contract_address }
+                        .price(pool_id, asset_params.asset);
+                    assert!(price.value > 0, "No data");
+                },
+                Option::None(_) => { break; }
+            };
+            i += 1;
+        };
+
+        store(
+            extension.contract_address,
+            map_entry_address(selector!("oracle_configs"), array![pool_id, usdc.contract_address.into()].span(),),
+            array!['USDC/USD', 0, 2, 0, 0, 1].span()
+        );
+
+        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS * 30);
 
         SetupParams {
             singleton,
@@ -698,6 +861,7 @@ mod TestForking {
 
         let interest_rate_configs = generate_interest_rate_configs(asset_params);
         let liquidation_params = generate_liquidation_params(asset_params, ((9 * SCALE) / 10).try_into().unwrap());
+        let debt_caps_params = generate_debt_caps_for_pairs(asset_params, 0);
         let shutdown_params = generate_shutdown_params(asset_params);
 
         // let singleton = ISingletonDispatcher { contract_address: deploy_contract("Singleton") };
@@ -719,12 +883,14 @@ mod TestForking {
 
         extension
             .create_pool(
+                'DefaultExtensionCL',
                 asset_params,
                 v_token_params,
                 max_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: creator },
                 creator
@@ -795,7 +961,7 @@ mod TestForking {
     }
 
     #[test]
-    #[available_gas(2000000)]
+    #[available_gas(3000000)]
     #[fork("Mainnet")]
     fn test_fork_modify_position() {
         let params = setup();
@@ -916,6 +1082,7 @@ mod TestForking {
             data: ArrayTrait::new().span()
         };
 
+        // prank(CheatTarget::One(singleton.contract_address), borrower, CheatSpan::TargetCalls(1));
         start_prank(CheatTarget::One(singleton.contract_address), borrower);
         singleton.modify_position(params);
         stop_prank(CheatTarget::One(singleton.contract_address));

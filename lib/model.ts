@@ -39,6 +39,9 @@ export interface PragmaOracleParams {
   pragma_key: BigNumberish;
   timeout: bigint;
   number_of_sources: bigint;
+  start_time_offset: bigint;
+  time_window: bigint;
+  aggregation_mode: CairoCustomEnum;
 }
 
 export interface InterestRateConfig {
@@ -63,6 +66,10 @@ export interface AssetIndexes {
 
 export interface LTVParams extends AssetIndexes {
   max_ltv: bigint;
+}
+
+export interface DebtCapParams extends AssetIndexes {
+  debt_cap: bigint;
 }
 
 export interface AssetConfig {
@@ -90,12 +97,14 @@ export interface FeeParams {
 }
 
 export interface CreatePoolParams {
+  pool_name: string;
   asset_params: AssetParams[];
   v_token_params: VTokenParams[];
   ltv_params: LTVParams[];
   interest_rate_configs: InterestRateConfig[];
   pragma_oracle_params: PragmaOracleParams[];
   liquidation_params: LiquidationParams[];
+  debt_caps_params: DebtCapParams[];
   shutdown_params: ShutdownParams;
   fee_params: FeeParams;
   owner: string;

@@ -31,7 +31,6 @@ mod vendor {
     mod erc20;
     mod erc20_component;
     mod pragma;
-    mod timelock;
 }
 
 mod test {
@@ -63,7 +62,5 @@ mod test {
     mod test_shutdown;
     mod test_singleton;
     mod test_transfer_position;
-    mod test_user;
     mod test_v_token;
-    mod timelock_test;
 }

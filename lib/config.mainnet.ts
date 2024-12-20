@@ -1,11 +1,11 @@
-import fs from "fs";
+import { CairoCustomEnum } from "starknet";
 import CONFIG from "vesu_changelog/configurations/config_genesis_sn_main.json" assert { type: "json" };
-import { Config, EnvAssetParams, PERCENT, SCALE, toScale, toUtilizationScale } from ".";
+// import CONFIG from "vesu_changelog/configurations/config_re7_usdc_sn_main.json" assert { type: "json" };
+// import CONFIG from "vesu_changelog/configurations/config_re7_xstrk_sn_main.json" assert { type: "json" };
+// import CONFIG from "vesu_changelog/configurations/config_re7_sstrk_sn_main.json" assert { type: "json" };
+import { Config, EnvAssetParams, SCALE, toScale, toUtilizationScale } from ".";
 
-let DEPLOYMENT: any = {};
-try {
-  DEPLOYMENT = JSON.parse(fs.readFileSync(`deployment-....json`, "utf-8"));
-} catch (error) {}
+import DEPLOYMENT from "vesu_changelog/deployments/deployment_sn_main.json" assert { type: "json" };
 
 const env = CONFIG.asset_parameters.map(
   (asset: any) =>
@@ -14,10 +14,10 @@ const env = CONFIG.asset_parameters.map(
       asset.token.symbol,
       BigInt(asset.token.decimals),
       0n,
-      asset.oracle.pragma_key,
+      asset.pragma.pragma_key,
       0n,
       asset.token.is_legacy,
-      BigInt(asset.fee_rate),
+      toScale(asset.fee_rate),
       asset.v_token.v_token_name,
       asset.v_token.v_token_symbol,
       asset.token.address,
@@ -28,16 +28,25 @@ export const config: Config = {
   name: "mainnet",
   protocol: {
     singleton: DEPLOYMENT.singleton || "0x0",
-    extension: DEPLOYMENT.extension || "0x0",
-    oracle: DEPLOYMENT.oracle || CONFIG.asset_parameters[0].oracle.address,
+    extensionPO: DEPLOYMENT.extensionPO || "0x0",
+    extensionCL: DEPLOYMENT.extensionCL || "0x0",
+    pragma: {
+      oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
+      summary_stats: DEPLOYMENT.pragma.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
+    },
   },
   env,
   pools: {
     "genesis-pool": {
       id: 1n,
+      // id: 2198503327643286920898110335698706244522220458610657370981979460625005526824n, // Genesis Pool
+      // id: 3592370751539490711610556844458488648008775713878064059760995781404350938653n, // Re7 USDC
+      // id: 2345856225134458665876812536882617294246962319062565703131100435311373119841n, // Re7 xSTRK
+      // id: 1301140954640322725373945719229815062445705809076381949099585786202465661889n, // Re7 sSTRK
       description: "",
       type: "",
       params: {
+        pool_name: "Genesis Pool",
         asset_params: CONFIG.asset_parameters.map((asset: any) => ({
           asset: asset.token.address,
           floor: toScale(asset.floor),
@@ -71,9 +80,15 @@ export const config: Config = {
           target_rate_percent: toScale(asset.target_rate_percent),
         })),
         pragma_oracle_params: CONFIG.asset_parameters.map((asset: any) => ({
-          pragma_key: asset.oracle.pragma_key,
-          timeout: BigInt(asset.oracle.timeout),
-          number_of_sources: BigInt(asset.oracle.number_of_sources),
+          pragma_key: asset.pragma.pragma_key,
+          timeout: BigInt(asset.pragma.timeout),
+          number_of_sources: BigInt(asset.pragma.number_of_sources),
+          start_time_offset: BigInt(asset.pragma.start_time_offset),
+          time_window: BigInt(asset.pragma.time_window),
+          aggregation_mode:
+            asset.pragma.aggregation_mode == "median" || asset.pragma.aggregation_mode == "Median"
+              ? new CairoCustomEnum({ Median: {}, Mean: undefined, Error: undefined })
+              : new CairoCustomEnum({ Median: undefined, Mean: {}, Error: undefined }),
         })),
         liquidation_params: CONFIG.pair_parameters.map((pair: any) => {
           const collateral_asset_index = CONFIG.asset_parameters.findIndex(
@@ -83,6 +98,15 @@ export const config: Config = {
             (asset: any) => asset.asset_name === pair.debt_asset_name,
           );
           return { collateral_asset_index, debt_asset_index, liquidation_factor: toScale(pair.liquidation_discount) };
+        }),
+        debt_caps_params: CONFIG.pair_parameters.map((pair: any) => {
+          const collateral_asset_index = CONFIG.asset_parameters.findIndex(
+            (asset: any) => asset.asset_name === pair.collateral_asset_name,
+          );
+          const debt_asset_index = CONFIG.asset_parameters.findIndex(
+            (asset: any) => asset.asset_name === pair.debt_asset_name,
+          );
+          return { collateral_asset_index, debt_asset_index, debt_cap: toScale(pair.debt_cap) };
         }),
         shutdown_params: {
           recovery_period: BigInt(CONFIG.pool_parameters.recovery_period),
@@ -94,7 +118,7 @@ export const config: Config = {
             const debt_asset_index = CONFIG.asset_parameters.findIndex(
               (asset: any) => asset.asset_name === pair.debt_asset_name,
             );
-            return { collateral_asset_index, debt_asset_index, max_ltv: 90n * PERCENT };
+            return { collateral_asset_index, debt_asset_index, max_ltv: toScale(pair.shutdown_ltv) };
           }),
         },
         fee_params: { fee_recipient: CONFIG.pool_parameters.fee_recipient },

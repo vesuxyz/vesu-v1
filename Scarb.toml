@@ -22,7 +22,7 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "Mainnet"
 url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
-block_id.number = "652612" # "700000"
+block_id.number = "652612"
 
 [tool.voyager]
 singleton = { path = "singleton.cairo" }
@@ -37,7 +37,8 @@ createPosition = "scarb --profile release build && node --loader ts-node/esm ./s
 deployDevnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployDevnet.ts"
 deployMainnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployMainnet.ts"
 deploySepolia = "scarb --profile release build && node --loader ts-node/esm ./scripts/deploySepolia.ts"
-deployTimelock = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployTimelock.ts"
+deployExtensions = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployExtensions.ts"
+verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/verifyPool.ts"
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
-test = "snforge test"
+test = "snforge test --max-n-steps 100000000"

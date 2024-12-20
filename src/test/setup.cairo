@@ -1,11 +1,12 @@
 use snforge_std::{
-    declare, ContractClass, ContractClassTrait, start_prank, stop_prank, start_warp, stop_warp, CheatTarget,
-    get_class_hash
+    declare, ContractClass, ContractClassTrait, start_prank, stop_prank, start_warp, stop_warp, CheatTarget, prank,
+    CheatSpan, get_class_hash
 };
 use starknet::{ClassHash, ContractAddress, contract_address_const, get_block_timestamp};
 use vesu::{
-    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS}, singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
-    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams},
+    units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS, INFLATION_FEE},
+    singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+    data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams, AssetParams, LTVParams, DebtCapParams},
     extension::interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
     extension::default_extension_ek::{
         IDefaultExtensionEKDispatcher, IDefaultExtensionEKDispatcherTrait, EkuboOracleParams
@@ -19,10 +20,13 @@ use vesu::{
     },
     vendor::ekubo::construct_oracle_pool_key,
     vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, math::{pow_10},
-    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait},
+    vendor::pragma::{IPragmaABIDispatcher, IPragmaABIDispatcherTrait, AggregationMode},
     test::mock_ekubo_core::{IMockEkuboCoreDispatcher, IMockEkuboCoreDispatcherTrait},
     test::mock_ekubo_oracle::{IMockEkuboOracleDispatcher, IMockEkuboOracleDispatcherTrait},
-    test::mock_oracle::{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait},
+    test::mock_oracle::{
+        IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+        IMockPragmaSummaryDispatcherTrait
+    },
     test::mock_chainlink_aggregator::{IMockChainlinkAggregatorDispatcher, IMockChainlinkAggregatorDispatcherTrait}
 };
 
@@ -165,10 +169,15 @@ fn setup_env(
         }
     };
 
+    let mock_pragma_summary = IMockPragmaSummaryDispatcher { contract_address: deploy_contract("MockPragmaSummary") };
+
     let v_token_class_hash = declare("VToken").class_hash;
 
     let args = array![
-        singleton.contract_address.into(), mock_pragma_oracle.contract_address.into(), v_token_class_hash.into()
+        singleton.contract_address.into(),
+        mock_pragma_oracle.contract_address.into(),
+        mock_pragma_summary.contract_address.into(),
+        v_token_class_hash.into()
     ];
     let extension = IDefaultExtensionDispatcher { contract_address: deploy_with_args("DefaultExtensionPO", args) };
 
@@ -187,6 +196,31 @@ fn setup_env(
     } else {
         deploy_assets(users.lender)
     };
+
+    // transfer 2x INFLATION_FEE to creator
+    start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
+    collateral_asset.transfer(users.creator, INFLATION_FEE * 2);
+    stop_prank(CheatTarget::One(collateral_asset.contract_address));
+    start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
+    debt_asset.transfer(users.creator, INFLATION_FEE * 2);
+    stop_prank(CheatTarget::One(debt_asset.contract_address));
+    start_prank(CheatTarget::One(third_asset.contract_address), users.lender);
+    third_asset.transfer(users.creator, INFLATION_FEE * 2);
+    stop_prank(CheatTarget::One(third_asset.contract_address));
+
+    // approve Extension and ExtensionV2 to transfer assets on behalf of creator
+    start_prank(CheatTarget::One(collateral_asset.contract_address), users.creator);
+    collateral_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    collateral_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(collateral_asset.contract_address));
+    start_prank(CheatTarget::One(debt_asset.contract_address), users.creator);
+    debt_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    debt_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(debt_asset.contract_address));
+    start_prank(CheatTarget::One(third_asset.contract_address), users.creator);
+    third_asset.approve(extension.contract_address, integer::BoundedInt::max());
+    third_asset.approve(extension_v2.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(third_asset.contract_address));
 
     // approve Singleton to transfer assets on behalf of lender
     start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
@@ -277,6 +311,17 @@ fn setup_env_v3(
         env.v_token_class_hash.into()
     ];
     let extension_v3 = IDefaultExtensionEKDispatcher { contract_address: deploy_with_args("DefaultExtensionEK", args) };
+
+    // approve Extension and ExtensionV2 to transfer assets on behalf of creator
+    start_prank(CheatTarget::One(collateral_asset.contract_address), env.users.creator);
+    collateral_asset.approve(extension_v3.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(collateral_asset.contract_address));
+    start_prank(CheatTarget::One(debt_asset.contract_address), env.users.creator);
+    debt_asset.approve(extension_v3.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(debt_asset.contract_address));
+    start_prank(CheatTarget::One(third_asset.contract_address), env.users.creator);
+    third_asset.approve(extension_v3.contract_address, integer::BoundedInt::max());
+    stop_prank(CheatTarget::One(third_asset.contract_address));
 
     let debt_asset_pool_key = construct_oracle_pool_key(
         debt_asset.contract_address, quote_asset.contract_address, mock_ekubo_oracle.contract_address
@@ -374,11 +419,28 @@ fn create_pool(
     };
 
     let collateral_asset_oracle_params = PragmaOracleParams {
-        pragma_key: COLL_PRAGMA_KEY, timeout: 0, number_of_sources: 2
+        pragma_key: COLL_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
     };
-    let debt_asset_oracle_params = PragmaOracleParams { pragma_key: DEBT_PRAGMA_KEY, timeout: 0, number_of_sources: 2 };
+    let debt_asset_oracle_params = PragmaOracleParams {
+        pragma_key: DEBT_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
+    };
     let third_asset_oracle_params = PragmaOracleParams {
-        pragma_key: THIRD_PRAGMA_KEY, timeout: 0, number_of_sources: 2
+        pragma_key: THIRD_PRAGMA_KEY,
+        timeout: 0,
+        number_of_sources: 2,
+        start_time_offset: 0,
+        time_window: 0,
+        aggregation_mode: AggregationMode::Median(())
     };
 
     let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
@@ -412,6 +474,11 @@ fn create_pool(
         collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
     };
 
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
     let shutdown_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
     };
@@ -443,19 +510,22 @@ fn create_pool(
         liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
     ]
         .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
     let shutdown_params = ShutdownParams {
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
 
-    start_prank(CheatTarget::One(extension.contract_address), creator);
+    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
+            'DefaultExtensionPO',
             asset_params,
             v_token_params,
             max_position_ltv_params,
             interest_rate_configs,
             oracle_params,
             liquidation_params,
+            debt_caps,
             shutdown_params,
             FeeParams { fee_recipient: creator },
             creator
@@ -475,6 +545,8 @@ fn create_pool(
     assert!(
         extension.collateral_asset_for_v_token(config.pool_id, third_v_token) != Zeroable::zero(), "vToken not set"
     );
+
+    assert!(extension.pool_name(config.pool_id) == 'DefaultExtensionPO', "pool name not set");
 }
 
 fn create_pool_v2(
@@ -560,6 +632,11 @@ fn create_pool_v2(
         collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
     };
 
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
     let shutdown_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
     };
@@ -593,19 +670,22 @@ fn create_pool_v2(
         liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
     ]
         .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
     let shutdown_params = ShutdownParams {
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
 
-    start_prank(CheatTarget::One(extension.contract_address), creator);
+    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
+            'DefaultExtensionCL',
             asset_params,
             v_token_params,
             max_position_ltv_params,
             interest_rate_configs,
             chainlink_oracle_params,
             liquidation_params,
+            debt_caps,
             shutdown_params,
             FeeParams { fee_recipient: creator },
             creator
@@ -630,6 +710,8 @@ fn create_pool_v2(
     assert!(
         extension.collateral_asset_for_v_token(config.pool_id_v2, third_v_token) != Zeroable::zero(), "vToken not set"
     );
+
+    assert!(extension.pool_name(config.pool_id_v2) == 'DefaultExtensionCL', "pool name not set");
 }
 
 fn create_pool_v3(
@@ -701,6 +783,11 @@ fn create_pool_v3(
         collateral_asset_index: 2, debt_asset_index: 1, liquidation_factor: 0
     };
 
+    let debt_cap_params_0 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0 };
+    let debt_cap_params_1 = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+    let debt_cap_params_2 = DebtCapParams { collateral_asset_index: 0, debt_asset_index: 2, debt_cap: 0 };
+    let debt_cap_params_3 = DebtCapParams { collateral_asset_index: 2, debt_asset_index: 1, debt_cap: 0 };
+
     let shutdown_ltv_params_0 = LTVParams {
         collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
     };
@@ -731,19 +818,22 @@ fn create_pool_v3(
         liquidation_params_0, liquidation_params_1, liquidation_params_2, liquidation_params_3
     ]
         .span();
+    let debt_caps = array![debt_cap_params_0, debt_cap_params_1, debt_cap_params_2, debt_cap_params_3].span();
     let shutdown_params = ShutdownParams {
         recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
     };
 
-    start_prank(CheatTarget::One(extension.contract_address), creator);
+    prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
     extension
         .create_pool(
+            'DefaultExtensionEK',
             asset_params,
             v_token_params,
             max_position_ltv_params,
             interest_rate_configs,
             ekubo_oracle_params,
             liquidation_params,
+            debt_caps,
             shutdown_params,
             FeeParams { fee_recipient: creator },
             creator
@@ -768,6 +858,8 @@ fn create_pool_v3(
     assert!(
         extension.collateral_asset_for_v_token(config.pool_id_v3, third_v_token) != Zeroable::zero(), "vToken not set"
     );
+
+    assert!(extension.pool_name(config.pool_id_v3) == 'DefaultExtensionEK', "pool name not set");
 }
 
 fn setup_pool(
@@ -819,140 +911,11 @@ fn setup_pool(
         stop_prank(CheatTarget::One(collateral_asset.contract_address));
     }
 
-    // make first deposit into pool 
     start_prank(CheatTarget::One(extension.contract_address), users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', 0);
     extension.set_asset_parameter(pool_id, debt_asset.contract_address, 'floor', 0);
     extension.set_asset_parameter(pool_id, third_asset.contract_address, 'floor', 0);
     stop_prank(CheatTarget::One(extension.contract_address));
-
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.lender);
-    collateral_asset.transfer(users.seeder, 2000);
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.lender);
-    debt_asset.transfer(users.seeder, 2000);
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-    start_prank(CheatTarget::One(third_asset.contract_address), users.lender);
-    third_asset.transfer(users.seeder, 2000);
-    stop_prank(CheatTarget::One(third_asset.contract_address));
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: collateral_asset.contract_address,
-        debt_asset: debt_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(collateral_asset.contract_address), users.seeder);
-    collateral_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(collateral_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
-
-    let (position, _, _) = singleton
-        .position(pool_id, collateral_asset.contract_address, debt_asset.contract_address, Zeroable::zero());
-    assert!(position.collateral_shares > 0, "Inflation fee not minted");
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: collateral_asset.contract_address,
-        debt_asset: third_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(third_asset.contract_address), users.seeder);
-    third_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(third_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: debt_asset.contract_address,
-        debt_asset: collateral_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.seeder);
-    debt_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: debt_asset.contract_address,
-        debt_asset: third_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(debt_asset.contract_address), users.seeder);
-    debt_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(debt_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: third_asset.contract_address,
-        debt_asset: collateral_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(third_asset.contract_address), users.seeder);
-    third_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(third_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
-
-    let params = ModifyPositionParams {
-        pool_id,
-        collateral_asset: third_asset.contract_address,
-        debt_asset: debt_asset.contract_address,
-        user: users.seeder,
-        collateral: Amount {
-            amount_type: AmountType::Delta, denomination: AmountDenomination::Native, value: 1000.into(),
-        },
-        debt: Default::default(),
-        data: ArrayTrait::new().span()
-    };
-    start_prank(CheatTarget::One(third_asset.contract_address), users.seeder);
-    third_asset.approve(singleton.contract_address, 1000);
-    stop_prank(CheatTarget::One(third_asset.contract_address));
-
-    start_prank(CheatTarget::One(singleton.contract_address), users.seeder);
-    singleton.modify_position(params);
-    stop_prank(CheatTarget::One(singleton.contract_address));
 
     start_prank(CheatTarget::One(extension.contract_address), users.creator);
     extension.set_asset_parameter(pool_id, collateral_asset.contract_address, 'floor', SCALE / 10_000);

@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod TestDefaultExtensionEK {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare};
+    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan};
     use starknet::get_contract_address;
     use vesu::{
-        units::{SCALE, PERCENT, DAY_IN_SECONDS}, test::mock_ekubo_core::IMockEkuboCoreDispatcherTrait,
+        units::{SCALE, PERCENT, DAY_IN_SECONDS, INFLATION_FEE}, test::mock_ekubo_core::IMockEkuboCoreDispatcherTrait,
         test::setup::{
             setup_env_v3, create_pool_v3, TestConfigV3, deploy_assets, deploy_asset, EnvV3, EKUBO_TWAP_PERIOD,
             test_interest_rate_config
@@ -76,20 +76,23 @@ mod TestDefaultExtensionEK {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
             .create_pool(
+                'DefaultExtensionEK',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -128,20 +131,27 @@ mod TestDefaultExtensionEK {
         let interest_rate_configs = array![].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
             .create_pool(
+                'DefaultExtensionEK',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -180,20 +190,27 @@ mod TestDefaultExtensionEK {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
             .create_pool(
+                'DefaultExtensionEK',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -232,20 +249,27 @@ mod TestDefaultExtensionEK {
         let interest_rate_configs = array![test_interest_rate_config()].span();
         let oracle_params = array![collateral_asset_oracle_params].span();
         let liquidation_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_ltv_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
             .create_pool(
+                'DefaultExtensionEK',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -287,6 +311,7 @@ mod TestDefaultExtensionEK {
         let oracle_params = array![quote_asset_oracle_params].span();
         let liquidation_params = array![].span();
         let shutdown_ltv_params = array![].span();
+        let debt_caps_params = array![].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
@@ -294,12 +319,14 @@ mod TestDefaultExtensionEK {
         start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
         extension_v3
             .create_pool(
+                'DefaultExtensionEK',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 interest_rate_configs,
                 oracle_params,
                 liquidation_params,
+                debt_caps_params,
                 shutdown_params,
                 FeeParams { fee_recipient: users.creator },
                 users.creator
@@ -352,7 +379,7 @@ mod TestDefaultExtensionEK {
         let ekubo_oracle_params = EkuboOracleParams { period: EKUBO_TWAP_PERIOD };
 
         extension_v3
-            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params, 0);
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
     }
 
     #[test]
@@ -394,9 +421,14 @@ mod TestDefaultExtensionEK {
         };
 
         let ekubo_oracle_params = EkuboOracleParams { period: EKUBO_TWAP_PERIOD };
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
-            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params, 0);
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
         stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
 
@@ -439,9 +471,14 @@ mod TestDefaultExtensionEK {
         };
 
         let ekubo_oracle_params = EkuboOracleParams { period: Zeroable::zero() };
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
-            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params, 0);
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
         stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
 
@@ -494,14 +531,18 @@ mod TestDefaultExtensionEK {
         );
         ekubo_core.set_pool_liquidity(asset_pool_key, Zeroable::zero());
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
-            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params, 0);
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
         stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
 
     #[test]
-    fn test_add_asset() {
+    fn test_add_asset_ek() {
         let EnvV3 { singleton, extension_v3, ekubo_core, ekubo_oracle, config, users, .. } = setup_env_v3(
             Zeroable::zero(),
             Zeroable::zero(),
@@ -543,14 +584,18 @@ mod TestDefaultExtensionEK {
 
         let ekubo_oracle_params = EkuboOracleParams { period: EKUBO_TWAP_PERIOD };
 
+        start_prank(CheatTarget::One(asset.contract_address), users.creator);
+        asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(asset.contract_address));
+
         let asset_pool_key = construct_oracle_pool_key(
             asset.contract_address, config.quote_asset.contract_address, ekubo_oracle.contract_address
         );
         ekubo_core.set_pool_liquidity(asset_pool_key, integer::BoundedInt::max());
 
-        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
-            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params, 0);
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
         stop_prank(CheatTarget::One(extension_v3.contract_address));
 
         let (asset_config, _) = singleton.asset_config(config.pool_id_v3, config.collateral_asset.contract_address);
@@ -1001,7 +1046,7 @@ mod TestDefaultExtensionEK {
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
         extension_v3
-            .set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'timeout', 5_u64);
+            .set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'timeout', 5);
     }
 
     #[test]
@@ -1020,8 +1065,7 @@ mod TestDefaultExtensionEK {
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
-        extension_v3
-            .set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'a', 5_u64);
+        extension_v3.set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'a', 5);
         stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
 
@@ -1256,10 +1300,18 @@ mod TestDefaultExtensionEK {
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
         start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
-        extension_v3.set_debt_cap(config.pool_id_v3, config.collateral_asset.contract_address, 1000);
+        extension_v3
+            .set_debt_cap(
+                config.pool_id_v3, config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000
+            );
         stop_prank(CheatTarget::One(extension_v3.contract_address));
 
-        assert!(extension_v3.debt_caps(config.pool_id_v3, config.collateral_asset.contract_address) == 1000);
+        assert!(
+            extension_v3
+                .debt_caps(
+                    config.pool_id_v3, config.collateral_asset.contract_address, config.debt_asset.contract_address
+                ) == 1000
+        );
     }
 
     #[test]
@@ -1277,8 +1329,16 @@ mod TestDefaultExtensionEK {
 
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
-        extension_v3.set_debt_cap(config.pool_id_v3, config.collateral_asset.contract_address, 1000);
+        extension_v3
+            .set_debt_cap(
+                config.pool_id_v3, config.collateral_asset.contract_address, config.debt_asset.contract_address, 1000
+            );
 
-        assert!(extension_v3.debt_caps(config.pool_id_v3, config.collateral_asset.contract_address) == 1000);
+        assert!(
+            extension_v3
+                .debt_caps(
+                    config.pool_id_v3, config.collateral_asset.contract_address, config.debt_asset.contract_address
+                ) == 1000
+        );
     }
 }

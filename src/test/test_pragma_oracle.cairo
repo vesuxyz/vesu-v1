@@ -1,15 +1,22 @@
 #[cfg(test)]
 mod TestPragmaOracle {
     use core::serde::Serde;
-    use snforge_std::{start_prank, stop_prank, start_warp, stop_warp, CheatTarget};
+    use snforge_std::{
+        start_prank, stop_prank, start_warp, stop_warp, CheatTarget, CheatSpan, prank, store, map_entry_address
+    };
     use starknet::{ContractAddress, get_block_timestamp};
     use vesu::{
         units::{SCALE, SCALE_128, PERCENT, DAY_IN_SECONDS},
-        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams},
+        data_model::{Amount, AmountType, AmountDenomination, ModifyPositionParams, DebtCapParams},
         singleton::{ISingletonDispatcherTrait, ISingletonDispatcher},
         test::{
             setup::{setup, setup_env, TestConfig, LendingTerms, COLL_PRAGMA_KEY, DEBT_PRAGMA_KEY, Env},
-            mock_oracle::{{IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait}}
+            mock_oracle::{
+                {
+                    IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait, IMockPragmaSummaryDispatcher,
+                    IMockPragmaSummaryDispatcherTrait
+                }
+            }
         },
         extension::{
             interface::{IExtensionDispatcher, IExtensionDispatcherTrait},
@@ -19,6 +26,7 @@ mod TestPragmaOracle {
             }
         },
         data_model::{AssetParams, LTVParams}, math::pow_10, common::{is_collateralized},
+        vendor::pragma::{AggregationMode}
     };
 
 
@@ -64,9 +72,21 @@ mod TestPragmaOracle {
         };
 
         let collateral_asset_oracle_params = PragmaOracleParams {
-            pragma_key: COLL_PRAGMA_KEY, timeout, number_of_sources
+            pragma_key: COLL_PRAGMA_KEY,
+            timeout,
+            number_of_sources,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
         };
-        let debt_asset_oracle_params = PragmaOracleParams { pragma_key: DEBT_PRAGMA_KEY, timeout, number_of_sources };
+        let debt_asset_oracle_params = PragmaOracleParams {
+            pragma_key: DEBT_PRAGMA_KEY,
+            timeout,
+            number_of_sources,
+            start_time_offset: 0,
+            time_window: 0,
+            aggregation_mode: AggregationMode::Median(())
+        };
 
         let collateral_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
         let debt_asset_v_token_params = VTokenParams { v_token_name: 'Vesu Debt', v_token_symbol: 'vDEBT' };
@@ -86,6 +106,11 @@ mod TestPragmaOracle {
             collateral_asset_index: 1, debt_asset_index: 0, liquidation_factor: 0
         };
 
+        let collateral_asset_debt_cap_params = DebtCapParams {
+            collateral_asset_index: 0, debt_asset_index: 1, debt_cap: 0
+        };
+        let debt_asset_debt_cap_params = DebtCapParams { collateral_asset_index: 1, debt_asset_index: 0, debt_cap: 0 };
+
         let shutdown_ltv_params_0 = LTVParams {
             collateral_asset_index: 1, debt_asset_index: 0, max_ltv: (75 * PERCENT).try_into().unwrap()
         };
@@ -101,20 +126,23 @@ mod TestPragmaOracle {
         let models = array![interest_rate_config, interest_rate_config].span();
         let oracle_params = array![collateral_asset_oracle_params, debt_asset_oracle_params].span();
         let liquidation_params = array![collateral_asset_liquidation_params, debt_asset_liquidation_params].span();
+        let debt_caps = array![collateral_asset_debt_cap_params, debt_asset_debt_cap_params].span();
         let shutdown_params = ShutdownParams {
             recovery_period: DAY_IN_SECONDS, subscription_period: DAY_IN_SECONDS, ltv_params: shutdown_ltv_params
         };
         let fee_params = FeeParams { fee_recipient: creator };
 
-        start_prank(CheatTarget::One(extension.contract_address), creator);
+        prank(CheatTarget::One(extension.contract_address), creator, CheatSpan::TargetCalls(1));
         extension
             .create_pool(
+                'DefaultExtensionPO',
                 asset_params,
                 v_token_params,
                 max_position_ltv_params,
                 models,
                 oracle_params,
                 liquidation_params,
+                debt_caps,
                 shutdown_params,
                 fee_params,
                 creator
@@ -309,5 +337,49 @@ mod TestPragmaOracle {
         let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
 
         assert!(!collateral_asset_price.is_valid, "Debt asset validity should be false");
+    }
+
+    #[test]
+    fn test_price_twap() {
+        let (_, default_extension_po, config, _, _) = setup();
+        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+
+        store(
+            default_extension_po.contract_address,
+            map_entry_address(
+                selector!("oracle_configs"), array![pool_id, collateral_asset.contract_address.into()].span(),
+            ),
+            array![COLL_PRAGMA_KEY, 0, 2, 1, 1, 1].span()
+        );
+
+        store(
+            default_extension_po.contract_address,
+            map_entry_address(selector!("oracle_configs"), array![pool_id, debt_asset.contract_address.into()].span(),),
+            array![DEBT_PRAGMA_KEY, 0, 2, 1, 1, 1].span()
+        );
+
+        let extension_dispatcher = IExtensionDispatcher { contract_address: default_extension_po.contract_address };
+        let pragma_oracle = IMockPragmaOracleDispatcher { contract_address: default_extension_po.pragma_oracle() };
+        let pragma_summary = IMockPragmaSummaryDispatcher { contract_address: default_extension_po.pragma_summary() };
+
+        let max: u128 = integer::BoundedInt::max();
+        // set collateral asset price
+        pragma_oracle.set_price(COLL_PRAGMA_KEY, 0);
+        pragma_summary.set_twap(COLL_PRAGMA_KEY, max, 18);
+        // set debt asset price
+        pragma_oracle.set_price(DEBT_PRAGMA_KEY, 0);
+        pragma_summary.set_twap(DEBT_PRAGMA_KEY, max, 18);
+
+        let collateral_asset_price = extension_dispatcher.price(pool_id, collateral_asset.contract_address);
+        let debt_asset_price = extension_dispatcher.price(pool_id, debt_asset.contract_address);
+
+        assert!(collateral_asset_price.value == max.into(), "Collateral asset price not correctly set");
+        assert!(debt_asset_price.value == max.into(), "Debt asset price not correctly set");
+        assert!(collateral_asset_price.is_valid, "Debt asset validity should be true");
+        assert!(debt_asset_price.is_valid, "Debt asset validity should be true");
+
+        let max_pair_LTV_ratio = 10 * SCALE;
+        let check_collat = is_collateralized(collateral_asset_price.value, debt_asset_price.value, max_pair_LTV_ratio);
+        assert!(check_collat, "Collateralization check failed");
     }
 }

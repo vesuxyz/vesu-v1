@@ -1,7 +1,7 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
 use vesu::{
-    data_model::{AssetParams, LTVParams, LTVConfig},
+    data_model::{AssetParams, LTVParams, LTVConfig, DebtCapParams},
     extension::{
         components::{
             interest_rate_model::InterestRateConfig,
@@ -20,11 +20,14 @@ struct ChainlinkOracleParams {
 
 #[starknet::interface]
 trait IDefaultExtensionCL<TContractState> {
+    fn pool_name(self: @TContractState, pool_id: felt252) -> felt252;
     fn pool_owner(self: @TContractState, pool_id: felt252) -> ContractAddress;
     fn chainlink_oracle_config(
         self: @TContractState, pool_id: felt252, asset: ContractAddress
     ) -> ChainlinkOracleConfig;
-    fn debt_caps(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> u256;
+    fn debt_caps(
+        self: @TContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+    ) -> u256;
     fn fee_config(self: @TContractState, pool_id: felt252) -> FeeConfig;
     fn interest_rate_config(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> InterestRateConfig;
     fn liquidation_config(
@@ -54,12 +57,14 @@ trait IDefaultExtensionCL<TContractState> {
     ) -> ContractAddress;
     fn create_pool(
         ref self: TContractState,
+        name: felt252,
         asset_params: Span<AssetParams>,
         v_token_params: Span<VTokenParams>,
         ltv_params: Span<LTVParams>,
         interest_rate_configs: Span<InterestRateConfig>,
         chainlink_oracle_params: Span<ChainlinkOracleParams>,
         liquidation_params: Span<LiquidationParams>,
+        debt_caps: Span<DebtCapParams>,
         shutdown_params: ShutdownParams,
         fee_params: FeeParams,
         owner: ContractAddress
@@ -70,18 +75,23 @@ trait IDefaultExtensionCL<TContractState> {
         asset_params: AssetParams,
         v_token_params: VTokenParams,
         interest_rate_config: InterestRateConfig,
-        chainlink_oracle_params: ChainlinkOracleParams,
-        debt_cap: u256
+        chainlink_oracle_params: ChainlinkOracleParams
     );
     fn set_asset_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
-    fn set_debt_cap(ref self: TContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256);
+    fn set_debt_cap(
+        ref self: TContractState,
+        pool_id: felt252,
+        collateral_asset: ContractAddress,
+        debt_asset: ContractAddress,
+        debt_cap: u256
+    );
     fn set_interest_rate_parameter(
         ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u256
     );
     fn set_chainlink_oracle_parameter(
-        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
+        ref self: TContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
     );
     fn set_liquidation_config(
         ref self: TContractState,
@@ -116,13 +126,18 @@ trait IDefaultExtensionCL<TContractState> {
 
 #[starknet::contract]
 mod DefaultExtensionCL {
-    use alexandria_math::i257::i257;
-    use starknet::{ContractAddress, get_contract_address, get_caller_address, event::EventEmitter};
-    use vesu::extension::components::position_hooks::position_hooks_component::Trait;
+    use alexandria_math::i257::{i257, i257_new};
+    use starknet::{
+        ContractAddress, get_contract_address, get_caller_address, event::EventEmitter, contract_address_const
+    };
     use vesu::{
         map_list::{map_list_component, map_list_component::MapListTrait},
-        data_model::{Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig},
+        data_model::{
+            Amount, UnsignedAmount, AssetParams, AssetPrice, LTVParams, Context, LTVConfig, ModifyPositionParams,
+            AmountDenomination, AmountType, DebtCapParams
+        },
         singleton::{ISingletonDispatcher, ISingletonDispatcherTrait},
+        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait}, units::INFLATION_FEE,
         extension::{
             default_extension_po::{
                 LiquidationParams, ShutdownParams, ITimestampManagerCallback, FeeParams, VTokenParams,
@@ -161,6 +176,8 @@ mod DefaultExtensionCL {
         singleton: ContractAddress,
         // tracks the owner for each pool
         owner: LegacyMap::<felt252, ContractAddress>,
+        // tracks the name for each pool
+        pool_names: LegacyMap::<felt252, felt252>,
         // storage for the position hooks component
         #[substorage(v0)]
         position_hooks: position_hooks_component::Storage,
@@ -277,6 +294,15 @@ mod DefaultExtensionCL {
 
     #[abi(embed_v0)]
     impl DefaultExtensionCLImpl of IDefaultExtensionCL<ContractState> {
+        /// Returns the name of a pool
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// # Returns
+        /// * `name` - name of the pool
+        fn pool_name(self: @ContractState, pool_id: felt252) -> felt252 {
+            self.pool_names.read(pool_id)
+        }
+
         /// Returns the owner of a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
@@ -310,11 +336,14 @@ mod DefaultExtensionCL {
         /// Returns the debt cap for a given asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
-        /// * `asset` - address of the asset
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         /// # Returns
         /// * `debt_cap` - debt cap
-        fn debt_caps(self: @ContractState, pool_id: felt252, asset: ContractAddress) -> u256 {
-            self.position_hooks.debt_caps.read((pool_id, asset))
+        fn debt_caps(
+            self: @ContractState, pool_id: felt252, collateral_asset: ContractAddress, debt_asset: ContractAddress
+        ) -> u256 {
+            self.position_hooks.debt_caps.read((pool_id, collateral_asset, debt_asset))
         }
 
         /// Returns the interest rate configuration for a given pool and asset
@@ -446,24 +475,28 @@ mod DefaultExtensionCL {
 
         /// Creates a new pool
         /// # Arguments
+        /// * `name` - name of the pool
         /// * `asset_params` - asset parameters
         /// * `v_token_params` - vToken parameters
         /// * `ltv_params` - loan-to-value parameters
         /// * `interest_rate_params` - interest rate model parameters
         /// * `chainlink_oracle_params` - chainlink oracle parameters
         /// * `liquidation_params` - liquidation parameters
+        /// * `debt_caps` - debt caps
         /// * `shutdown_params` - shutdown parameters
         /// * `fee_params` - fee model parameters
         /// # Returns
         /// * `pool_id` - id of the pool
         fn create_pool(
             ref self: ContractState,
+            name: felt252,
             mut asset_params: Span<AssetParams>,
             mut v_token_params: Span<VTokenParams>,
             mut ltv_params: Span<LTVParams>,
             mut interest_rate_configs: Span<InterestRateConfig>,
             mut chainlink_oracle_params: Span<ChainlinkOracleParams>,
             mut liquidation_params: Span<LiquidationParams>,
+            mut debt_caps: Span<DebtCapParams>,
             shutdown_params: ShutdownParams,
             fee_params: FeeParams,
             owner: ContractAddress
@@ -475,8 +508,12 @@ mod DefaultExtensionCL {
             assert!(asset_params.len() == v_token_params.len(), "v-token-params-mismatch");
 
             // create the pool in the singleton
-            let pool_id = ISingletonDispatcher { contract_address: self.singleton.read() }
-                .create_pool(asset_params, ltv_params, get_contract_address());
+            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
+            let pool_id = singleton.create_pool(asset_params, ltv_params, get_contract_address());
+
+            // set the pool name
+            self.pool_names.write(pool_id, name);
+
             // set the pool owner
             self.owner.write(pool_id, owner);
 
@@ -503,6 +540,30 @@ mod DefaultExtensionCL {
                     // deploy the vToken for the the collateral asset
                     self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
+                    // burn inflation fee
+                    let asset = IERC20Dispatcher { contract_address: asset };
+                    assert!(
+                        asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE),
+                        "transfer-from-failed"
+                    );
+                    assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
+                    singleton
+                        .modify_position(
+                            ModifyPositionParams {
+                                pool_id,
+                                collateral_asset: asset.contract_address,
+                                debt_asset: Zeroable::zero(),
+                                user: contract_address_const::<'ZERO'>(),
+                                collateral: Amount {
+                                    amount_type: AmountType::Delta,
+                                    denomination: AmountDenomination::Assets,
+                                    value: i257_new(INFLATION_FEE, false),
+                                },
+                                debt: Default::default(),
+                                data: ArrayTrait::new().span()
+                            }
+                        );
+
                     i += 1;
                 };
 
@@ -521,6 +582,16 @@ mod DefaultExtensionCL {
                             debt_asset,
                             LiquidationConfig { liquidation_factor: params.liquidation_factor }
                         );
+                };
+
+            // set the debt caps for each pair
+            let mut debt_caps = debt_caps;
+            while !debt_caps
+                .is_empty() {
+                    let params = *debt_caps.pop_front().unwrap();
+                    let collateral_asset = *asset_params.at(params.collateral_asset_index).asset;
+                    let debt_asset = *asset_params.at(params.debt_asset_index).asset;
+                    self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, params.debt_cap);
                 };
 
             // set the max shutdown LTVs for each asset
@@ -554,7 +625,6 @@ mod DefaultExtensionCL {
         /// * `v_token_params` - vToken parameters
         /// * `interest_rate_model` - interest rate model
         /// * `chainlink_oracle_params` - chainlink oracle parameters
-        /// * `debt_cap` - debt cap
         fn add_asset(
             ref self: ContractState,
             pool_id: felt252,
@@ -562,7 +632,6 @@ mod DefaultExtensionCL {
             v_token_params: VTokenParams,
             interest_rate_config: InterestRateConfig,
             chainlink_oracle_params: ChainlinkOracleParams,
-            debt_cap: u256
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let asset = asset_params.asset;
@@ -578,9 +647,6 @@ mod DefaultExtensionCL {
                     }
                 );
 
-            // set the debt cap
-            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
-
             // set the interest rate model configuration
             self.interest_rate_model.set_interest_rate_config(pool_id, asset, interest_rate_config);
 
@@ -588,17 +654,48 @@ mod DefaultExtensionCL {
             let VTokenParams { v_token_name, v_token_symbol } = v_token_params;
             self.tokenization.create_v_token(pool_id, asset, v_token_name, v_token_symbol);
 
-            ISingletonDispatcher { contract_address: self.singleton.read() }.set_asset_config(pool_id, asset_params);
+            let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
+            singleton.set_asset_config(pool_id, asset_params);
+
+            // burn inflation fee
+            let asset = IERC20Dispatcher { contract_address: asset };
+            assert!(
+                asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE), "transfer-from-failed"
+            );
+            assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
+            singleton
+                .modify_position(
+                    ModifyPositionParams {
+                        pool_id,
+                        collateral_asset: asset.contract_address,
+                        debt_asset: Zeroable::zero(),
+                        user: contract_address_const::<'ZERO'>(),
+                        collateral: Amount {
+                            amount_type: AmountType::Delta,
+                            denomination: AmountDenomination::Assets,
+                            value: i257_new(INFLATION_FEE, false),
+                        },
+                        debt: Default::default(),
+                        data: ArrayTrait::new().span()
+                    }
+                );
         }
 
         /// Sets the debt cap for a given asset in a pool
         /// # Arguments
         /// * `pool_id` - id of the pool
-        /// * `asset` - address of the asset
+        /// * `collateral_asset` - address of the collateral asset
+        /// * `debt_asset` - address of the debt asset
         /// * `debt_cap` - debt cap
-        fn set_debt_cap(ref self: ContractState, pool_id: felt252, asset: ContractAddress, debt_cap: u256) {
+        fn set_debt_cap(
+            ref self: ContractState,
+            pool_id: felt252,
+            collateral_asset: ContractAddress,
+            debt_asset: ContractAddress,
+            debt_cap: u256
+        ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
-            self.position_hooks.set_debt_cap(pool_id, asset, debt_cap);
+            self.position_hooks.set_debt_cap(pool_id, collateral_asset, debt_asset, debt_cap);
         }
 
         /// Sets a parameter for a given interest rate configuration for an asset in a pool
@@ -621,7 +718,7 @@ mod DefaultExtensionCL {
         /// * `parameter` - parameter name
         /// * `value` - value of the parameter
         fn set_chainlink_oracle_parameter(
-            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: u64
+            ref self: ContractState, pool_id: felt252, asset: ContractAddress, parameter: felt252, value: felt252
         ) {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             self.chainlink_oracle.set_chainlink_oracle_parameter(pool_id, asset, parameter, value);
