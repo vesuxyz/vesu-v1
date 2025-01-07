@@ -8,7 +8,7 @@ struct EkuboOracleConfig {
 
 #[starknet::component]
 mod ekubo_oracle_component {
-    use starknet::ContractAddress;
+    use starknet::{ContractAddress, get_block_timestamp};
     use super::EkuboOracleConfig;
     use vesu::math::pow_10;
     use vesu::units::SCALE;
@@ -145,6 +145,8 @@ mod ekubo_oracle_component {
         ) {
             assert!(ekubo_oracle_config.period.is_non_zero(), "ekubo-oracle-config-already-set");
 
+            self.assert_valid_period(asset, ekubo_oracle_config.period);
+
             // check if the pool is liquid
             let pool_key: PoolKey = construct_oracle_pool_key(
                 asset, self.quote_asset.read(), self.oracle_address.read()
@@ -175,13 +177,26 @@ mod ekubo_oracle_component {
 
             if parameter == 'period' {
                 assert!(value != 0, "invalid-ekubo-oracle-period-value");
-                ekubo_oracle_config.period = value.try_into().unwrap();
+                let period: u64 = value.try_into().unwrap();
+                self.assert_valid_period(asset, period);
+                ekubo_oracle_config.period = period;
             } else {
                 assert!(false, "invalid-ekubo-oracle-parameter");
             }
 
             self.ekubo_oracle_configs.write((pool_id, asset), ekubo_oracle_config);
             self.emit(SetEkuboOracleParameter { pool_id, asset, parameter, value });
+        }
+
+        fn assert_valid_period(self: @ComponentState<TContractState>, asset: ContractAddress, period: u64) {
+            let oracle = IEkuboOracleDispatcher { contract_address: self.oracle_address.read() };
+            let earliest_observation_time = oracle.get_earliest_observation_time(asset, self.quote_asset.read());
+            match earliest_observation_time {
+                Option::Some(timestamp) => {
+                    assert!(timestamp <= get_block_timestamp() - period, "ekubo-oracle-period-too-large");
+                },
+                Option::None => { panic!("ekubo-oracle-no-price-data"); }
+            };
         }
     }
 }

@@ -22,6 +22,11 @@ trait IEkuboCore<TContractState> {
 // https://github.com/EkuboProtocol/oracle-extension/blob/main/src/oracle.cairo
 #[starknet::interface]
 trait IEkuboOracle<TContractState> {
+    // Returns the timestamp of the earliest observation for a given pair, or Option::None if the
+    // pair has no observations
+    fn get_earliest_observation_time(
+        self: @TContractState, token_a: ContractAddress, token_b: ContractAddress
+    ) -> Option<u64>;
     // Returns the geomean average price of a token as a 128.128 over the last `period` seconds
     fn get_price_x128_over_last(
         self: @TContractState, base_token: ContractAddress, quote_token: ContractAddress, period: u64
