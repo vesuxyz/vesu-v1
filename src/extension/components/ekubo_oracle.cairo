@@ -143,7 +143,7 @@ mod ekubo_oracle_component {
             asset: ContractAddress,
             ekubo_oracle_config: EkuboOracleConfig
         ) {
-            assert!(ekubo_oracle_config.period.is_non_zero(), "invalid-ekubo-oracle-period");
+            assert!(ekubo_oracle_config.period.is_non_zero(), "ekubo-oracle-config-already-set");
 
             // check if the pool is liquid
             let pool_key: PoolKey = construct_oracle_pool_key(

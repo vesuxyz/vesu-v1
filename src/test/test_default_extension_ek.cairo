@@ -433,7 +433,7 @@ mod TestDefaultExtensionEK {
     }
 
     #[test]
-    #[should_panic(expected: "invalid-ekubo-oracle-period")]
+    #[should_panic(expected: "ekubo-oracle-config-already-set")]
     fn test_add_asset_invalid_period() {
         let EnvV3 { extension_v3, config, users, .. } = setup_env_v3(
             Zeroable::zero(),
