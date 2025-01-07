@@ -338,6 +338,12 @@ fn setup_env_v3(
     mock_ekubo_core.set_pool_liquidity(third_asset_pool_key, integer::BoundedInt::max());
 
     if ekubo_oracle_address.is_zero() {
+        start_warp(CheatTarget::All, get_block_timestamp() + EKUBO_TWAP_PERIOD);
+        mock_ekubo_oracle.set_earliest_observation_time(debt_asset.contract_address, quote_asset.contract_address, 1);
+        mock_ekubo_oracle
+            .set_earliest_observation_time(collateral_asset.contract_address, quote_asset.contract_address, 1);
+        mock_ekubo_oracle.set_earliest_observation_time(third_asset.contract_address, quote_asset.contract_address, 1);
+
         mock_ekubo_oracle.set_price_x128(debt_asset.contract_address, quote_asset.contract_address, SCALE_128.into());
         mock_ekubo_oracle
             .set_price_x128(collateral_asset.contract_address, quote_asset.contract_address, SCALE_128.into());

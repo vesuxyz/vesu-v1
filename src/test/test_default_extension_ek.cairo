@@ -1,9 +1,12 @@
 #[cfg(test)]
 mod TestDefaultExtensionEK {
-    use snforge_std::{start_prank, stop_prank, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan};
-    use starknet::get_contract_address;
+    use snforge_std::{
+        start_prank, stop_prank, start_warp, CheatTarget, get_class_hash, ContractClass, declare, prank, CheatSpan
+    };
+    use starknet::{get_block_timestamp, get_contract_address};
     use vesu::{
         units::{SCALE, PERCENT, DAY_IN_SECONDS, INFLATION_FEE}, test::mock_ekubo_core::IMockEkuboCoreDispatcherTrait,
+        test::mock_ekubo_oracle::{IMockEkuboOracleDispatcher, IMockEkuboOracleDispatcherTrait},
         test::setup::{
             setup_env_v3, create_pool_v3, TestConfigV3, deploy_assets, deploy_asset, EnvV3, EKUBO_TWAP_PERIOD,
             test_interest_rate_config
@@ -471,6 +474,61 @@ mod TestDefaultExtensionEK {
         };
 
         let ekubo_oracle_params = EkuboOracleParams { period: Zeroable::zero() };
+
+        start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
+        config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
+        stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
+
+        prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
+        extension_v3
+            .add_asset(config.pool_id_v3, asset_params, v_token_params, interest_rate_config, ekubo_oracle_params);
+        stop_prank(CheatTarget::One(extension_v3.contract_address));
+    }
+
+    #[test]
+    #[should_panic(expected: "ekubo-oracle-no-price-data")]
+    fn test_add_asset_no_price_data() {
+        let EnvV3 { extension_v3, config, users, .. } = setup_env_v3(
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+        );
+
+        create_pool_v3(extension_v3, config, users.creator, Option::None);
+
+        let asset = deploy_asset(
+            ContractClass { class_hash: get_class_hash(config.collateral_asset.contract_address) }, users.creator
+        );
+
+        let asset_params = AssetParams {
+            asset: asset.contract_address,
+            floor: SCALE / 10_000,
+            initial_rate_accumulator: SCALE,
+            initial_full_utilization_rate: (1582470460 + 32150205761) / 2,
+            max_utilization: SCALE,
+            is_legacy: false,
+            fee_rate: 0
+        };
+
+        let v_token_params = VTokenParams { v_token_name: 'Vesu Collateral', v_token_symbol: 'vCOLL' };
+
+        let interest_rate_config = InterestRateConfig {
+            min_target_utilization: 75_000,
+            max_target_utilization: 85_000,
+            target_utilization: 87_500,
+            min_full_utilization_rate: 1582470460,
+            max_full_utilization_rate: 32150205761,
+            zero_utilization_rate: 158247046,
+            rate_half_life: 172_800,
+            target_rate_percent: 20 * PERCENT,
+        };
+
+        start_warp(CheatTarget::All, get_block_timestamp() + EKUBO_TWAP_PERIOD);
+        let ekubo_oracle_params = EkuboOracleParams { period: EKUBO_TWAP_PERIOD };
 
         start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
         config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
@@ -1047,6 +1105,68 @@ mod TestDefaultExtensionEK {
 
         extension_v3
             .set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'timeout', 5);
+    }
+
+    #[test]
+    #[should_panic(expected: "ekubo-oracle-period-too-large")]
+    fn test_extension_set_oracle_parameter_period_too_large() {
+        let EnvV3 { extension_v3, config, users, ekubo_oracle, .. } = setup_env_v3(
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+        );
+
+        create_pool_v3(extension_v3, config, users.creator, Option::None);
+
+        let ts = get_block_timestamp();
+        start_warp(CheatTarget::All, ts + EKUBO_TWAP_PERIOD - 1);
+
+        ekubo_oracle
+            .set_earliest_observation_time(
+                config.collateral_asset.contract_address, config.quote_asset.contract_address, ts
+            );
+
+        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        extension_v3
+            .set_ekubo_oracle_parameter(
+                config.pool_id_v3, config.collateral_asset.contract_address, 'period', EKUBO_TWAP_PERIOD.into()
+            );
+        stop_prank(CheatTarget::One(extension_v3.contract_address));
+    }
+
+    #[test]
+    #[should_panic(expected: "ekubo-oracle-period-too-large")]
+    fn test_extension_set_oracle_parameter_no_data() {
+        let EnvV3 { extension_v3, config, users, ekubo_oracle, .. } = setup_env_v3(
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+        );
+
+        create_pool_v3(extension_v3, config, users.creator, Option::None);
+
+        let ts = get_block_timestamp();
+        start_warp(CheatTarget::All, ts + EKUBO_TWAP_PERIOD - 1);
+
+        ekubo_oracle
+            .set_earliest_observation_time(
+                config.collateral_asset.contract_address, config.quote_asset.contract_address, ts
+            );
+
+        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        extension_v3
+            .set_ekubo_oracle_parameter(
+                config.pool_id_v3, config.collateral_asset.contract_address, 'period', EKUBO_TWAP_PERIOD.into()
+            );
+        stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
 
     #[test]
