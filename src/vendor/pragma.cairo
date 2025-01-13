@@ -12,6 +12,7 @@ enum AggregationMode {
     #[default]
     Median,
     Mean,
+    ConversionRate,
     Error,
 }
 
