@@ -41,4 +41,4 @@ deployExtensions = "scarb --profile release build && node --loader ts-node/esm .
 verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/verifyPool.ts"
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
-test = "snforge test --max-n-steps 100000000 'test_fixed_shutdown_mode'"
+test = "snforge test --max-n-steps 100000000"
