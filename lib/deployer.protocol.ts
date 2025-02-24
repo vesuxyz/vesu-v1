@@ -71,6 +71,11 @@ export class Deployer extends BaseDeployer {
     return Protocol.from(contracts, this);
   }
 
+  async loadExtensionPOV(extensionPO: Contract) {
+    const extensionPOV0 = await this.loadContract(extensionPO.address);
+    return extensionPOV0;
+  }
+
   async deployProtocol(pragma: PragmaConfig) {
     const [contracts, calls] = await this.deferProtocol(pragma);
     const response = await this.execute([...calls]);
@@ -133,8 +138,10 @@ export class Deployer extends BaseDeployer {
     const v_token_class_hash = await this.declareCached("VToken");
     const calldataPO = CallData.compile({
       singleton: singleton,
-      oracle_address: pragma.oracle!,
-      summary_stats_address: pragma.summary_stats!,
+      // oracle_address: pragma.oracle!,
+      oracle_address: "0x36031daa264c24520b11d93af622c848b2499b66b41d611bac95e13cfca131a",
+      // summary_stats_address: pragma.summary_stats!,
+      summary_stats_address: "0x0379afb83d2f8e38ab08252750233665a812a24278aacdde52475618edbf879c",
       v_token_class_hash: v_token_class_hash,
     });
     const [extensionPO, calls2] = await this.deferContract("DefaultExtensionPO", calldataPO);

@@ -17,3 +17,5 @@ dist
 deployment_*
 
 .vscode
+
+.DS_Store

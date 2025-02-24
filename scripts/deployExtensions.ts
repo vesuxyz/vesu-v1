@@ -1,6 +1,6 @@
 import { setup } from "../lib";
 
-const deployer = await setup("mainnet");
+const deployer = await setup("sepolia");
 
 const [extensionPO, extensionCL] = await deployer.deployExtensions(
   deployer.config.protocol.singleton!,

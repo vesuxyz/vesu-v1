@@ -21,6 +21,9 @@ mod extension {
         mod pragma_oracle;
         mod tokenization;
     }
+    mod legacy {
+        mod default_extension_po_v0;
+    }
 }
 
 mod vendor {
