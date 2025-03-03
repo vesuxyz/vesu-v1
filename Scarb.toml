@@ -25,7 +25,7 @@ url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
 block_id.number = "652612"
 
 [tool.voyager]
-singleton = { path = "singleton.cairo" }
+singleton = { path = "src/singleton.cairo" }
 
 [scripts]
 format = "scarb fmt && yarn prettier --write ."
@@ -34,6 +34,7 @@ startDevnet = "./scripts/startDevnet.sh"
 killDevnet = "lsof -t -i tcp:5050 | xargs kill"
 createPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPool.ts"
 createPosition = "scarb --profile release build && node --loader ts-node/esm ./scripts/createPosition.ts"
+checkShutdownStatus = "scarb --profile release build && node --loader ts-node/esm ./scripts/checkShutdownStatus.ts"
 deployDevnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployDevnet.ts"
 deployMainnet = "scarb --profile release build && node --loader ts-node/esm ./scripts/deployMainnet.ts"
 deploySepolia = "scarb --profile release build && node --loader ts-node/esm ./scripts/deploySepolia.ts"
