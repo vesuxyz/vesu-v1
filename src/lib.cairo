@@ -11,10 +11,12 @@ mod v_token;
 
 mod extension {
     mod default_extension_cl;
+    mod default_extension_ek;
     mod default_extension_po;
     mod interface;
     mod components {
         mod chainlink_oracle;
+        mod ekubo_oracle;
         mod fee_model;
         mod interest_rate_model;
         mod position_hooks;
@@ -25,6 +27,7 @@ mod extension {
 
 mod vendor {
     mod chainlink;
+    mod ekubo;
     mod erc20;
     mod erc20_component;
     mod pragma;
@@ -33,6 +36,8 @@ mod vendor {
 mod test {
     mod mock_asset;
     mod mock_chainlink_aggregator;
+    mod mock_ekubo_core;
+    mod mock_ekubo_oracle;
     mod mock_extension;
     mod mock_oracle;
     mod mock_singleton;
@@ -40,7 +45,9 @@ mod test {
     mod test_asset_retrieval;
     mod test_common;
     mod test_default_extension_cl;
+    mod test_default_extension_ek;
     mod test_default_extension_po;
+    mod test_ekubo_oracle;
     mod test_flash_loan;
     mod test_forking;
     mod test_interest_rate_model;
