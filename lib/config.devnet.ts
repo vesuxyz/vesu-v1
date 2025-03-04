@@ -49,7 +49,7 @@ export const config: Config = {
       summary_stats: "0x0",
     },
     ekubo: {
-      core: "0x0"
+      core: "0x0",
     },
   },
   env,
