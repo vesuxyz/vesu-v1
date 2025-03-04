@@ -1153,6 +1153,38 @@ mod TestDefaultExtensionEK {
     }
 
     #[test]
+    #[should_panic(expected: "ekubo-oracle-period-too-large")]
+    fn test_extension_set_oracle_parameter_no_data() {
+        let EnvV3 { extension_v3, config, users, ekubo_oracle, .. } = setup_env_v3(
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+            Zeroable::zero(),
+        );
+
+        create_pool_v3(extension_v3, config, users.creator, Option::None);
+
+        let next_ts = 1500;
+        start_warp(CheatTarget::All, next_ts + EKUBO_TWAP_PERIOD);
+
+        ekubo_oracle
+            .set_earliest_observation_time(
+                config.collateral_asset.contract_address, config.quote_asset.contract_address, next_ts
+            );
+
+        let new_twap_period = EKUBO_TWAP_PERIOD * 2;
+        start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
+        extension_v3
+            .set_ekubo_oracle_parameter(
+                config.pool_id_v3, config.collateral_asset.contract_address, 'period', new_twap_period.into()
+            );
+        stop_prank(CheatTarget::One(extension_v3.contract_address));
+    }
+
+    #[test]
     #[should_panic(expected: "invalid-ekubo-oracle-parameter")]
     fn test_extension_set_oracle_parameter_invalid_oracle_parameter() {
         let EnvV3 { extension_v3, config, users, .. } = setup_env_v3(
