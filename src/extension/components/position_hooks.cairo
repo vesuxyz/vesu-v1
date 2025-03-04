@@ -327,9 +327,21 @@ mod position_hooks_component {
             let FixedShutdownMode { fixed_shutdown_mode, fixed_offset, .. } = self
                 .fixed_shutdown_mode
                 .read(context.pool_id);
-            let shutdown_mode = infer_shutdown_mode_from_timestamp(
+            let mut shutdown_mode = infer_shutdown_mode_from_timestamp(
                 shutdown_config, oldest_violating_timestamp, fixed_offset
             );
+
+            // skip the violation checks if the shutdown mode has been fixed
+            if fixed_shutdown_mode != ShutdownMode::None {
+                return ShutdownStatus {
+                    shutdown_mode: fixed_shutdown_mode,
+                    violating: false,
+                    previous_violation_timestamp: 0,
+                    count_at_violation_timestamp: 0
+                };
+            }
+
+            // skip the violation checks if the shutdown process has progressed beyond the recovery period
             if shutdown_mode != ShutdownMode::None && shutdown_mode != ShutdownMode::Recovery {
                 return ShutdownStatus {
                     shutdown_mode, violating: false, previous_violation_timestamp: 0, count_at_violation_timestamp: 0
@@ -373,14 +385,8 @@ mod position_hooks_component {
                 };
 
             // infer shutdown mode from the oldest violating timestamp
-            let mut shutdown_mode = infer_shutdown_mode_from_timestamp(
-                shutdown_config, oldest_violating_timestamp, fixed_offset
-            );
-
-            // check if the shutdown mode has been overwritten
-            if fixed_shutdown_mode != ShutdownMode::None {
-                shutdown_mode = fixed_shutdown_mode;
-            }
+            shutdown_mode =
+                infer_shutdown_mode_from_timestamp(shutdown_config, oldest_violating_timestamp, fixed_offset);
 
             ShutdownStatus { shutdown_mode, violating, previous_violation_timestamp, count_at_violation_timestamp }
         }
