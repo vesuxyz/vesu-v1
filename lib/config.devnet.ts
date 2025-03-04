@@ -48,6 +48,9 @@ export const config: Config = {
       oracle: "0x0",
       summary_stats: "0x0",
     },
+    ekubo: {
+      core: "0x0"
+    },
   },
   env,
   pools: {
