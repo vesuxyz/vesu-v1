@@ -1902,7 +1902,7 @@ mod TestShutdown {
     }
 
     #[test]
-    fn test_unsafe_rate_accumulator() {
+    fn test_recovery_mode_unsafe_rate_accumulator() {
         let current_time = 1707509060;
         start_warp(CheatTarget::All, current_time);
 
@@ -2361,5 +2361,78 @@ mod TestShutdown {
         start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
         singleton.transfer_position(params);
         stop_prank(CheatTarget::One(singleton.contract_address));
+    }
+
+    #[test]
+    fn test_fixed_shutdown_mode() {
+        let (singleton, extension, config, users, terms) = setup();
+        let TestConfig { pool_id, collateral_asset, debt_asset, .. } = config;
+        let LendingTerms { liquidity_to_deposit, collateral_to_deposit, nominal_debt_to_draw, .. } = terms;
+
+        // User 1
+
+        // deposit collateral which is later borrowed by the borrower
+        let params = ModifyPositionParams {
+            pool_id,
+            collateral_asset: debt_asset.contract_address,
+            debt_asset: collateral_asset.contract_address,
+            user: users.lender,
+            collateral: Amount {
+                amount_type: AmountType::Delta,
+                denomination: AmountDenomination::Assets,
+                value: liquidity_to_deposit.into(),
+            },
+            debt: Default::default(),
+            data: ArrayTrait::new().span()
+        };
+
+        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        singleton.modify_position(params);
+        stop_prank(CheatTarget::One(singleton.contract_address));
+
+        // User 2
+
+        let params = ModifyPositionParams {
+            pool_id,
+            collateral_asset: collateral_asset.contract_address,
+            debt_asset: debt_asset.contract_address,
+            user: users.borrower,
+            collateral: Amount {
+                amount_type: AmountType::Target,
+                denomination: AmountDenomination::Assets,
+                value: collateral_to_deposit.into(),
+            },
+            debt: Amount {
+                amount_type: AmountType::Target,
+                denomination: AmountDenomination::Native,
+                value: nominal_debt_to_draw.into(),
+            },
+            data: ArrayTrait::new().span()
+        };
+
+        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        singleton.modify_position(params);
+        stop_prank(CheatTarget::One(singleton.contract_address));
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Recovery);
+        stop_prank(CheatTarget::One(extension.contract_address));
+        let shutdown_mode = extension
+            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        assert!(shutdown_mode == ShutdownMode::Recovery, "shutdown-mode-not-recovery");
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Subscription);
+        stop_prank(CheatTarget::One(extension.contract_address));
+        let shutdown_mode = extension
+            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        assert!(shutdown_mode == ShutdownMode::Subscription, "shutdown-mode-not-subscription");
+
+        start_prank(CheatTarget::One(extension.contract_address), users.creator);
+        extension.set_shutdown_mode(pool_id, ShutdownMode::Redemption);
+        stop_prank(CheatTarget::One(extension.contract_address));
+        let shutdown_mode = extension
+            .update_shutdown_status(pool_id, collateral_asset.contract_address, debt_asset.contract_address);
+        assert!(shutdown_mode == ShutdownMode::Redemption, "shutdown-mode-not-redemption");
     }
 }

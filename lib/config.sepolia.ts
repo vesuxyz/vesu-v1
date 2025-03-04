@@ -49,6 +49,9 @@ export const config: Config = {
       oracle: DEPLOYMENT.pragma.oracle || CONFIG.asset_parameters[0].pragma.oracle || "0x0",
       summary_stats: DEPLOYMENT.pragma.summary_stats || CONFIG.asset_parameters[0].pragma.summary_stats || "0x0",
     },
+    ekubo: {
+      core: DEPLOYMENT.ekubo.core || "0x0",
+    },
   },
   env,
   pools: {

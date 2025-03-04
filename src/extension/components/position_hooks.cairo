@@ -31,8 +31,9 @@ struct Pair {
     total_nominal_debt: u256 // packed as u123 [SCALE]
 }
 
-#[derive(PartialEq, Copy, Drop, Serde)]
+#[derive(PartialEq, Copy, Drop, Serde, Default, starknet::Store)]
 enum ShutdownMode {
+    #[default]
     None,
     Recovery,
     Subscription,
@@ -45,6 +46,16 @@ struct ShutdownStatus {
     violating: bool,
     previous_violation_timestamp: u64,
     count_at_violation_timestamp: u128,
+}
+
+#[derive(PartialEq, Copy, Drop, Serde, starknet::Store)]
+struct FixedShutdownMode {
+    // fixed shutdown mode (overwrites the inferred shutdown mode)
+    fixed_shutdown_mode: ShutdownMode,
+    // timestamp at which the fixed shutdown mode was last updated
+    last_fixed_timestamp: u64,
+    // contains the cumulative time of how long the shutdown mode was overwritten for each pool
+    fixed_offset: u64,
 }
 
 #[derive(PartialEq, Copy, Drop, Serde)]
@@ -83,7 +94,7 @@ mod position_hooks_component {
             default_extension_po::{IDefaultExtensionCallback, ITimestampManagerCallback, ITokenizationCallback},
             components::position_hooks::{
                 ShutdownMode, ShutdownStatus, ShutdownConfig, LiquidationConfig, LiquidationData, Pair,
-                assert_shutdown_config, assert_liquidation_config
+                assert_shutdown_config, assert_liquidation_config, FixedShutdownMode
             }
         }
     };
@@ -96,6 +107,9 @@ mod position_hooks_component {
         // specifies the ltv configuration for each pair at which the recovery mode for a pool is triggered
         // (pool_id, collateral_asset, debt_asset) -> shutdown ltv configuration
         shutdown_ltv_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LTVConfig>,
+        // contains the fixed (overwritten) shutdown mode state for a pool
+        // pool_id -> fixed shutdown mode
+        fixed_shutdown_mode: LegacyMap::<felt252, FixedShutdownMode>,
         // contains the liquidation configuration for each pair in a pool
         // (pool_id, collateral_asset, debt_asset) -> liquidation configuration
         liquidation_configs: LegacyMap::<(felt252, ContractAddress, ContractAddress), LiquidationConfig>,
@@ -162,14 +176,22 @@ mod position_hooks_component {
     }
 
     // Infers the shutdown_config from the timestamp at which the violation occurred and the current time
-    fn infer_shutdown_mode_from_timestamp(shutdown_config: ShutdownConfig, entered_timestamp: u64) -> ShutdownMode {
+    fn infer_shutdown_mode_from_timestamp(
+        shutdown_config: ShutdownConfig, mut entered_timestamp: u64, overwritten_time_offset: u64
+    ) -> ShutdownMode {
         let ShutdownConfig { recovery_period, subscription_period } = shutdown_config;
-        let current_time = get_block_timestamp();
+        let current_timestamp = get_block_timestamp();
+        entered_timestamp =
+            if entered_timestamp + overwritten_time_offset <= current_timestamp {
+                entered_timestamp + overwritten_time_offset
+            } else {
+                entered_timestamp
+            };
         if entered_timestamp == 0 || (recovery_period == 0 && subscription_period == 0) {
             ShutdownMode::None
-        } else if current_time - entered_timestamp < recovery_period {
+        } else if current_timestamp - entered_timestamp < recovery_period {
             ShutdownMode::Recovery
-        } else if current_time - entered_timestamp < recovery_period + subscription_period {
+        } else if current_timestamp - entered_timestamp < recovery_period + subscription_period {
             ShutdownMode::Subscription
         } else {
             ShutdownMode::Redemption
@@ -302,7 +324,24 @@ mod position_hooks_component {
 
             // if pool is in either subscription period, redemption period, then return mode
             let shutdown_config = self.shutdown_configs.read(context.pool_id);
-            let shutdown_mode = infer_shutdown_mode_from_timestamp(shutdown_config, oldest_violating_timestamp);
+            let FixedShutdownMode { fixed_shutdown_mode, fixed_offset, .. } = self
+                .fixed_shutdown_mode
+                .read(context.pool_id);
+            let mut shutdown_mode = infer_shutdown_mode_from_timestamp(
+                shutdown_config, oldest_violating_timestamp, fixed_offset
+            );
+
+            // skip the violation checks if the shutdown mode has been fixed
+            if fixed_shutdown_mode != ShutdownMode::None {
+                return ShutdownStatus {
+                    shutdown_mode: fixed_shutdown_mode,
+                    violating: false,
+                    previous_violation_timestamp: 0,
+                    count_at_violation_timestamp: 0
+                };
+            }
+
+            // skip the violation checks if the shutdown process has progressed beyond the recovery period
             if shutdown_mode != ShutdownMode::None && shutdown_mode != ShutdownMode::Recovery {
                 return ShutdownStatus {
                     shutdown_mode, violating: false, previous_violation_timestamp: 0, count_at_violation_timestamp: 0
@@ -346,7 +385,8 @@ mod position_hooks_component {
                 };
 
             // infer shutdown mode from the oldest violating timestamp
-            let shutdown_mode = infer_shutdown_mode_from_timestamp(shutdown_config, oldest_violating_timestamp);
+            shutdown_mode =
+                infer_shutdown_mode_from_timestamp(shutdown_config, oldest_violating_timestamp, fixed_offset);
 
             ShutdownStatus { shutdown_mode, violating, previous_violation_timestamp, count_at_violation_timestamp }
         }
@@ -361,6 +401,12 @@ mod position_hooks_component {
         /// * `shutdown_mode` - the shutdown mode of the pool
         fn update_shutdown_status(ref self: ComponentState<TContractState>, ref context: Context) -> ShutdownMode {
             let mut violation_timestamp_manager = self.get_contract_mut();
+
+            // check if the shutdown mode has been overwritten
+            let FixedShutdownMode { fixed_shutdown_mode, .. } = self.fixed_shutdown_mode.read(context.pool_id);
+            if fixed_shutdown_mode != ShutdownMode::None {
+                return fixed_shutdown_mode;
+            }
 
             let ShutdownStatus { shutdown_mode,
             violating,
@@ -406,6 +452,63 @@ mod position_hooks_component {
             }
 
             shutdown_mode
+        }
+
+        /// Sets the shutdown mode for a pool which overwrites the inferred shutdown mode.
+        /// # Arguments
+        /// * `context` - contextual state of the user (position owner)
+        /// * `shutdown_mode` - shutdown mode
+        fn set_shutdown_mode(
+            ref self: ComponentState<TContractState>, pool_id: felt252, new_fixed_shutdown_mode: ShutdownMode
+        ) {
+            // track for how many seconds the shutdown state was overwritten
+            let FixedShutdownMode { fixed_shutdown_mode, last_fixed_timestamp, fixed_offset, .. } = self
+                .fixed_shutdown_mode
+                .read(pool_id);
+
+            // can only transition to recovery mode if the shutdown mode is in normal mode
+            assert!(
+                fixed_shutdown_mode != ShutdownMode::None || new_fixed_shutdown_mode == ShutdownMode::Recovery,
+                "fixed-shutdown-mode-not-none-or-recovery"
+            );
+            // can only transition back to normal mode or subscription mode if the shutdown mode is in recovery mode
+            assert!(
+                fixed_shutdown_mode != ShutdownMode::Recovery
+                    || (new_fixed_shutdown_mode == ShutdownMode::None
+                        || new_fixed_shutdown_mode == ShutdownMode::Subscription),
+                "fixed-shutdown-mode-not-none-or-subscription"
+            );
+            // can only transition to redemption mode if the shutdown mode is in subscription mode
+            assert!(
+                fixed_shutdown_mode != ShutdownMode::Subscription
+                    || new_fixed_shutdown_mode == ShutdownMode::Redemption,
+                "fixed-shutdown-mode-not-redemption"
+            );
+            // can not transition into any shutdown mode if the shutdown mode is in redemption mode
+            assert!(fixed_shutdown_mode != ShutdownMode::Redemption, "fixed-shutdown-mode-in-redemption");
+
+            self
+                .fixed_shutdown_mode
+                .write(
+                    pool_id,
+                    FixedShutdownMode {
+                        // update when moving from non fixed to fixed
+                        last_fixed_timestamp: if fixed_shutdown_mode == ShutdownMode::None
+                            && new_fixed_shutdown_mode != ShutdownMode::None {
+                            get_block_timestamp()
+                        } else {
+                            last_fixed_timestamp
+                        },
+                        // update when moving from fixed to non fixed
+                        fixed_offset: if fixed_shutdown_mode != ShutdownMode::None
+                            && new_fixed_shutdown_mode == ShutdownMode::None {
+                            fixed_offset + get_block_timestamp() - last_fixed_timestamp
+                        } else {
+                            fixed_offset
+                        },
+                        fixed_shutdown_mode: new_fixed_shutdown_mode,
+                    }
+                );
         }
 
         /// Updates the tracked total collateral shares and the total nominal debt assigned to a specific pair.

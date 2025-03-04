@@ -112,6 +112,7 @@ trait IDefaultExtensionEK<TContractState> {
         debt_asset: ContractAddress,
         shutdown_ltv_config: LTVConfig
     );
+    fn set_shutdown_mode(ref self: TContractState, pool_id: felt252, shutdown_mode: ShutdownMode);
     fn set_extension(ref self: TContractState, pool_id: felt252, extension: ContractAddress);
     fn set_pool_owner(ref self: TContractState, pool_id: felt252, owner: ContractAddress);
     fn update_shutdown_status(
@@ -822,6 +823,15 @@ mod DefaultExtensionEK {
             assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
             let singleton = ISingletonDispatcher { contract_address: self.singleton.read() };
             singleton.set_extension(pool_id, extension);
+        }
+
+        /// Sets the shutdown mode for a given pool and overwrites the inferred shutdown mode
+        /// # Arguments
+        /// * `pool_id` - id of the pool
+        /// * `shutdown_mode` - shutdown mode
+        fn set_shutdown_mode(ref self: ContractState, pool_id: felt252, shutdown_mode: ShutdownMode) {
+            assert!(get_caller_address() == self.owner.read(pool_id), "caller-not-owner");
+            self.position_hooks.set_shutdown_mode(pool_id, shutdown_mode);
         }
 
         /// Returns the shutdown mode for a specific pair in a pool.
