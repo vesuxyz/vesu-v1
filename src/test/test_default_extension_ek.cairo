@@ -589,6 +589,10 @@ mod TestDefaultExtensionEK {
         );
         ekubo_core.set_pool_liquidity(asset_pool_key, Zeroable::zero());
 
+        ekubo_oracle.set_earliest_observation_time(asset.contract_address, config.quote_asset.contract_address, 1);
+        let ts = get_block_timestamp();
+        start_warp(CheatTarget::All, ts + EKUBO_TWAP_PERIOD + 1);
+
         start_prank(CheatTarget::One(config.collateral_asset.contract_address), users.creator);
         config.collateral_asset.approve(extension_v3.contract_address, INFLATION_FEE);
         stop_prank(CheatTarget::One(config.collateral_asset.contract_address));
@@ -650,6 +654,10 @@ mod TestDefaultExtensionEK {
             asset.contract_address, config.quote_asset.contract_address, ekubo_oracle.contract_address
         );
         ekubo_core.set_pool_liquidity(asset_pool_key, integer::BoundedInt::max());
+
+        ekubo_oracle.set_earliest_observation_time(asset.contract_address, config.quote_asset.contract_address, 1);
+        let ts = get_block_timestamp();
+        start_warp(CheatTarget::All, ts + EKUBO_TWAP_PERIOD + 1);
 
         prank(CheatTarget::One(extension_v3.contract_address), users.creator, CheatSpan::TargetCalls(1));
         extension_v3
@@ -1078,14 +1086,20 @@ mod TestDefaultExtensionEK {
 
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
+        let ts = get_block_timestamp();
+        let new_twap_period: u64 = 1500;
+        start_warp(CheatTarget::All, ts + new_twap_period + 1);
+
         start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
         extension_v3
-            .set_ekubo_oracle_parameter(config.pool_id_v3, config.collateral_asset.contract_address, 'period', 1500);
+            .set_ekubo_oracle_parameter(
+                config.pool_id_v3, config.collateral_asset.contract_address, 'period', new_twap_period.into()
+            );
         stop_prank(CheatTarget::One(extension_v3.contract_address));
 
         let oracle_config = extension_v3
             .ekubo_oracle_config(config.pool_id_v3, config.collateral_asset.contract_address);
-        assert(oracle_config.period == 1500, 'Oracle parameter not set');
+        assert(oracle_config.period == new_twap_period.into(), 'Oracle parameter not set');
     }
 
     #[test]
@@ -1153,18 +1167,19 @@ mod TestDefaultExtensionEK {
 
         create_pool_v3(extension_v3, config, users.creator, Option::None);
 
-        let ts = get_block_timestamp();
-        start_warp(CheatTarget::All, ts + EKUBO_TWAP_PERIOD - 1);
+        let next_ts = 1500;
+        start_warp(CheatTarget::All, next_ts + EKUBO_TWAP_PERIOD);
 
         ekubo_oracle
             .set_earliest_observation_time(
-                config.collateral_asset.contract_address, config.quote_asset.contract_address, ts
+                config.collateral_asset.contract_address, config.quote_asset.contract_address, next_ts
             );
 
+        let new_twap_period = EKUBO_TWAP_PERIOD * 2;
         start_prank(CheatTarget::One(extension_v3.contract_address), users.creator);
         extension_v3
             .set_ekubo_oracle_parameter(
-                config.pool_id_v3, config.collateral_asset.contract_address, 'period', EKUBO_TWAP_PERIOD.into()
+                config.pool_id_v3, config.collateral_asset.contract_address, 'period', new_twap_period.into()
             );
         stop_prank(CheatTarget::One(extension_v3.contract_address));
     }
