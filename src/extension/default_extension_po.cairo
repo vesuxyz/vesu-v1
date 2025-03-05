@@ -356,6 +356,26 @@ mod DefaultExtensionPO {
         }
     }
 
+    /// Helper method for transferring an amount of an asset from one address to another. Reverts if the transfer fails.
+    /// # Arguments
+    /// * `asset` - address of the asset
+    /// * `sender` - address of the sender of the assets
+    /// * `to` - address of the receiver of the assets
+    /// * `amount` - amount of assets to transfer [asset scale]
+    /// * `is_legacy` - whether the asset is a legacy ERC20 (only supporting camelCase instead of snake_case)
+    fn transfer_asset(
+        asset: ContractAddress, sender: ContractAddress, to: ContractAddress, amount: u256, is_legacy: bool
+    ) {
+        let erc20 = IERC20Dispatcher { contract_address: asset };
+        if sender == get_contract_address() {
+            assert!(erc20.transfer(to, amount), "transfer-failed");
+        } else if is_legacy {
+            assert!(erc20.transferFrom(sender, to, amount), "transferFrom-failed");
+        } else {
+            assert!(erc20.transfer_from(sender, to, amount), "transfer-from-failed");
+        }
+    }
+
     #[abi(embed_v0)]
     impl DefaultExtensionImpl of IDefaultExtension<ContractState> {
         /// Returns the name of a pool
@@ -597,7 +617,8 @@ mod DefaultExtensionPO {
             let mut i = 0;
             while !asset_params_copy
                 .is_empty() {
-                    let asset = *asset_params_copy.pop_front().unwrap().asset;
+                    let asset_params = *asset_params_copy.pop_front().unwrap();
+                    let asset = asset_params.asset;
 
                     // set the oracle config
                     let params = *pragma_oracle_params.pop_front().unwrap();
@@ -630,9 +651,12 @@ mod DefaultExtensionPO {
 
                     // burn inflation fee
                     let asset = IERC20Dispatcher { contract_address: asset };
-                    assert!(
-                        asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE),
-                        "transfer-from-failed"
+                    transfer_asset(
+                        asset.contract_address,
+                        get_caller_address(),
+                        get_contract_address(),
+                        INFLATION_FEE,
+                        asset_params.is_legacy
                     );
                     assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
                     singleton
@@ -752,8 +776,12 @@ mod DefaultExtensionPO {
 
             // burn inflation fee
             let asset = IERC20Dispatcher { contract_address: asset };
-            assert!(
-                asset.transferFrom(get_caller_address(), get_contract_address(), INFLATION_FEE), "transfer-from-failed"
+            transfer_asset(
+                asset.contract_address,
+                get_caller_address(),
+                get_contract_address(),
+                INFLATION_FEE,
+                asset_params.is_legacy
             );
             assert!(asset.approve(singleton.contract_address, INFLATION_FEE), "approve-failed");
             singleton
