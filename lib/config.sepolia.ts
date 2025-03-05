@@ -62,7 +62,7 @@ export const config: Config = {
       params: {
         pool_name: "Genesis Pool",
         asset_params: CONFIG.asset_parameters.map((asset: any) => ({
-          asset: "0x0",
+          asset: asset.token.address,
           floor: toScale(asset.floor),
           initial_rate_accumulator: SCALE,
           initial_full_utilization_rate: toScale(asset.initial_full_utilization_rate),
