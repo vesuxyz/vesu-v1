@@ -16,6 +16,9 @@ interface ProtocolConfig {
     oracle: string | undefined;
     summary_stats: string | undefined;
   };
+  ekubo: {
+    core: string | undefined;
+  };
 }
 
 export class EnvAssetParams {
