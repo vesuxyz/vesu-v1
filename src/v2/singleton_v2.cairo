@@ -939,7 +939,7 @@ mod SingletonV2 {
             (is_collateralized(collateral_value, debt_value, context.max_ltv.into()), collateral_value, debt_value)
         }
 
-        /// Wrapper around check_collateralization() that prevents reentrancy
+        /// Wrapper around check_collateralization_unsafe() that prevents reentrancy
         /// # Arguments
         /// * `pool_id` - id of the pool
         /// * `collateral_asset` - address of the collateral asset
