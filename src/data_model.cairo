@@ -105,7 +105,6 @@ struct DebtCapParams {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct ModifyPositionParams {
-    pool_id: felt252,
     collateral_asset: ContractAddress,
     debt_asset: ContractAddress,
     user: ContractAddress,
@@ -116,7 +115,6 @@ struct ModifyPositionParams {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct TransferPositionParams {
-    pool_id: felt252,
     from_collateral_asset: ContractAddress,
     from_debt_asset: ContractAddress,
     to_collateral_asset: ContractAddress,
@@ -131,7 +129,6 @@ struct TransferPositionParams {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct LiquidatePositionParams {
-    pool_id: felt252,
     collateral_asset: ContractAddress,
     debt_asset: ContractAddress,
     user: ContractAddress,
@@ -150,7 +147,6 @@ struct UpdatePositionResponse {
 
 #[derive(PartialEq, Copy, Drop, Serde)]
 struct Context {
-    pool_id: felt252,
     extension: ContractAddress,
     collateral_asset: ContractAddress,
     debt_asset: ContractAddress,
