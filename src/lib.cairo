@@ -7,7 +7,6 @@ mod singleton_v2;
 mod units;
 
 mod v_token;
-mod v_token_v2;
 
 mod extension {
     mod default_extension_po_v2;
@@ -58,5 +57,4 @@ mod test {
     mod test_transfer_position;
     mod test_upgrade;
     mod test_v_token;
-    mod test_v_token_v2;
 }

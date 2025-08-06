@@ -19,7 +19,6 @@ mod fee_model_component {
             default_extension_po_v2::{IDefaultExtensionCallback, ITokenizationCallback}
         },
         vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        v_token_v2::{IVTokenV2Dispatcher, IVTokenV2DispatcherTrait}
     };
 
     #[storage]
@@ -98,16 +97,7 @@ mod fee_model_component {
                 contract_address: self.get_contract().v_token_for_collateral_asset(pool_id, collateral_asset)
             };
 
-            let unmigrated = if _is_v1_pool(pool_id) {
-                let v_token_v1 = IERC20Dispatcher {
-                    contract_address: IVTokenV2Dispatcher { contract_address: v_token.contract_address }.v_token_v1()
-                };
-                v_token_v1.total_supply() - v_token_v1.balance_of(contract_address_const::<'0x0'>())
-            } else {
-                0
-            };
-
-            let amount = position.collateral_shares - (v_token.total_supply() + unmigrated);
+            let amount = position.collateral_shares - (v_token.total_supply());
 
             let UpdatePositionResponse { collateral_delta, .. } = ISingletonV2Dispatcher { contract_address: singleton }
                 .modify_position(
