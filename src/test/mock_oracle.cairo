@@ -1,7 +1,7 @@
-use vesu::vendor::pragma::{PragmaPricesResponse, DataType, AggregationMode};
+use vesu::vendor::pragma::{AggregationMode, DataType, PragmaPricesResponse};
 
 #[starknet::interface]
-trait IMockPragmaSummary<TContractState> {
+pub trait IMockPragmaSummary<TContractState> {
     fn calculate_twap(
         self: @TContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
     ) -> (u128, u32);
@@ -10,24 +10,27 @@ trait IMockPragmaSummary<TContractState> {
 
 #[starknet::contract]
 mod MockPragmaSummary {
-    use starknet::{get_block_timestamp, get_caller_address};
-    use vesu::{vendor::pragma::{DataType, AggregationMode}, test::mock_oracle::IMockPragmaSummary};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
+    use vesu::test::mock_oracle::IMockPragmaSummary;
+    use vesu::vendor::pragma::{AggregationMode, DataType};
 
     #[storage]
     struct Storage {
-        twaps: LegacyMap::<felt252, u128>,
+        twaps: Map<felt252, u128>,
         decimals: u32,
     }
 
     #[abi(embed_v0)]
     impl MockPragmaSummaryImpl of IMockPragmaSummary<ContractState> {
         fn calculate_twap(
-            self: @ContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64
+            self: @ContractState, data_type: DataType, aggregation_mode: AggregationMode, time: u64, start_time: u64,
         ) -> (u128, u32) {
             match data_type {
                 DataType::SpotEntry(key) => { (self.twaps.read(key), self.decimals.read()) },
                 DataType::FutureEntry => { (0, 0) },
-                DataType::GenericEntry => { (0, 0) }
+                DataType::GenericEntry => { (0, 0) },
             }
         }
 
@@ -39,9 +42,9 @@ mod MockPragmaSummary {
 }
 
 #[starknet::interface]
-trait IMockPragmaOracle<TContractState> {
+pub trait IMockPragmaOracle<TContractState> {
     fn get_data(
-        ref self: TContractState, data_type: DataType, aggregation_mode: AggregationMode
+        ref self: TContractState, data_type: DataType, aggregation_mode: AggregationMode,
     ) -> PragmaPricesResponse;
     fn get_data_median(ref self: TContractState, data_type: DataType) -> PragmaPricesResponse;
     fn get_num_sources_aggregated(ref self: TContractState, key: felt252) -> u32;
@@ -53,8 +56,10 @@ trait IMockPragmaOracle<TContractState> {
 
 #[starknet::contract]
 mod MockPragmaOracle {
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{get_block_timestamp, get_caller_address};
-    use vesu::{vendor::pragma::{PragmaPricesResponse, DataType, AggregationMode}, test::mock_oracle::IMockPragmaOracle};
+    use vesu::test::mock_oracle::IMockPragmaOracle;
+    use vesu::vendor::pragma::{AggregationMode, DataType, PragmaPricesResponse};
 
     #[derive(Copy, Drop, Serde)]
     struct BaseEntry {
@@ -73,9 +78,9 @@ mod MockPragmaOracle {
 
     #[storage]
     struct Storage {
-        prices: LegacyMap::<felt252, u128>,
-        num_sources_aggregated: LegacyMap::<felt252, u32>,
-        last_updated_timestamp: LegacyMap::<felt252, u64>,
+        prices: Map<felt252, u128>,
+        num_sources_aggregated: Map<felt252, u32>,
+        last_updated_timestamp: Map<felt252, u64>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -86,11 +91,11 @@ mod MockPragmaOracle {
 
     #[derive(Drop, starknet::Event)]
     struct SubmittedSpotEntry {
-        spot_entry: SpotEntry
+        spot_entry: SpotEntry,
     }
 
     #[abi(embed_v0)]
-    impl MockPragmaOracleImpl of super::IMockPragmaOracle<ContractState> {
+    impl MockPragmaOracleImpl of IMockPragmaOracle<ContractState> {
         fn get_num_sources_aggregated(ref self: ContractState, key: felt252) -> u32 {
             let num_sources_aggregated = self.num_sources_aggregated.read(key);
             if num_sources_aggregated == 0 {
@@ -110,7 +115,7 @@ mod MockPragmaOracle {
         }
 
         fn get_data(
-            ref self: ContractState, data_type: DataType, aggregation_mode: AggregationMode
+            ref self: ContractState, data_type: DataType, aggregation_mode: AggregationMode,
         ) -> PragmaPricesResponse {
             self.get_data_median(data_type)
         }
@@ -143,7 +148,7 @@ mod MockPragmaOracle {
                         num_sources_aggregated: 0,
                         expiration_timestamp: Option::None,
                     }
-                }
+                },
             }
         }
 
@@ -162,9 +167,9 @@ mod MockPragmaOracle {
                                 price: price,
                                 pair_id: 0,
                                 volume: 0,
-                            }
-                        }
-                    )
+                            },
+                        },
+                    ),
                 );
         }
 

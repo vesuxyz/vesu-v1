@@ -1,8 +1,8 @@
 [package]
 name = "vesu"
 version = "0.1.0"
-cairo-version = "=2.6.3"
-edition = "2023_01"
+cairo-version = "=2.11.4"
+edition = "2024_07"
 
 [lib]
 
@@ -11,9 +11,10 @@ casm = true
 sierra = true
 
 [dependencies]
-starknet = "2.5.4"
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.21.0" }
-alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "e7b6957" }
+starknet = "2.11.4"
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.46.0" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "c804e98" }
+openzeppelin = "2.0.0"
 
 [tool.fmt]
 max-line-length = 120
@@ -22,12 +23,13 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "Mainnet"
 url = "MAINNET_RPC_URL"
-block_id.number = "1443429"
+block_id.number = "1565065"
 
 [tool.voyager]
-singleton = { path = "src/singleton.cairo" }
+singleton = { path = "src/singleton_v2.cairo" }
 
 [scripts]
+buildRelease = "scarb --profile release build"
 format = "scarb fmt && yarn prettier --write ."
 checkFormat = "scarb fmt --check && yarn prettier --check ."
 startDevnet = "./scripts/startDevnet.sh"
@@ -42,4 +44,5 @@ deployExtensions = "scarb --profile release build && node --loader ts-node/esm .
 verifyPool = "scarb --profile release build && node --loader ts-node/esm ./scripts/verifyPool.ts"
 checkGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --check"
 updateGasReport = "scarb --profile release build && node --loader ts-node/esm ./scripts/gasReport.ts --write"
-test = "snforge test --max-n-steps 10000000"
+print-contract-size = "scarb --profile release build && node --loader ts-node/esm ./scripts/print-contract-size.ts"
+test = "snforge test --max-n-steps 100000000"

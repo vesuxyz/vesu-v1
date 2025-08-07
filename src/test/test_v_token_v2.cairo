@@ -1,48 +1,40 @@
 #[cfg(test)]
 mod TestVTokenV2 {
-    use alexandria_math::i257::{i257, i257_new, U256IntoI257};
-    use integer::BoundedInt;
-    use snforge_std::{
-        cheatcodes::{start_warp, stop_warp, CheatTarget, start_prank, stop_prank, CheatSpan, prank}, declare
+    use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
+    use snforge_std::{CheatSpan, DeclareResultTrait, cheat_caller_address, declare};
+    use starknet::syscalls::deploy_syscall;
+    use starknet::{ContractAddress, get_contract_address};
+    use vesu::data_model::AssetConfig;
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionPOV2DispatcherTrait;
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, deploy_asset, deploy_contract, deploy_with_args, setup};
+    use vesu::units::SCALE;
+    use vesu::v_token_v2::{
+        IERC4626Dispatcher, IERC4626DispatcherTrait, IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, VTokenV2,
     };
-    use starknet::{ContractAddress, get_contract_address, get_caller_address, deploy_syscall, contract_address_const};
-    use vesu::{
-        units::{SCALE, DAY_IN_SECONDS, YEAR_IN_SECONDS},
-        data_model::{AssetConfig, Context, Position, Amount, AmountType, AmountDenomination, ModifyPositionParams},
-        math::pow_10,
-        common::{
-            calculate_nominal_debt, calculate_debt, calculate_utilization, calculate_collateral_shares,
-            calculate_collateral, deconstruct_collateral_amount, deconstruct_debt_amount, is_collateralized,
-            apply_position_update_to_context, calculate_rate_accumulator, calculate_collateral_and_debt_value
-        },
-        vendor::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait},
-        test::v2::setup_v2::{deploy_contract, deploy_asset, setup, TestConfig, LendingTerms, deploy_with_args},
-        v2::{
-            singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait},
-            v_token_v2::{
-                IVTokenV2Dispatcher, IVTokenV2DispatcherTrait, IERC4626Dispatcher, IERC4626DispatcherTrait, VTokenV2
-            },
-            default_extension_po_v2::{IDefaultExtensionPOV2Dispatcher, IDefaultExtensionPOV2DispatcherTrait},
-        }
-    };
+    use vesu::vendor::erc20::{IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait};
 
     fn deploy_v_token() -> ContractAddress {
         let pool_id = '1';
         let singleton = deploy_contract("MockSingleton");
         let args = array![singleton.into()];
         let extension = deploy_with_args("MockExtension", args);
-        let asset = deploy_asset(declare("MockAsset"), get_contract_address());
+        let asset = IERC20MetadataDispatcher {
+            contract_address: deploy_asset(get_contract_address()).contract_address,
+        };
         let name = asset.name();
         let symbol = asset.symbol();
 
-        let v_token_v1_class_hash = declare("VToken").class_hash;
-        let v_token_v2_class_hash = declare("VTokenV2").class_hash;
+        let v_token_v1_class_hash = *declare("VToken").unwrap().contract_class().class_hash;
+        let v_token_v2_class_hash = *declare("VTokenV2").unwrap().contract_class().class_hash;
 
         let (v_token_v1, _) = (deploy_syscall(
             v_token_v1_class_hash.try_into().unwrap(),
             0,
-            array!['v' + name, 'v' + symbol, 18, pool_id, extension.into(), asset.contract_address.into()].span(),
-            true
+            array!['v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into()].span(),
+            true,
         ))
             .unwrap();
 
@@ -50,16 +42,10 @@ mod TestVTokenV2 {
             v_token_v2_class_hash.try_into().unwrap(),
             0,
             array![
-                'v' + name,
-                'v' + symbol,
-                18,
-                pool_id,
-                extension.into(),
-                asset.contract_address.into(),
-                v_token_v1.into()
+                'v' + name, 'v' + symbol, pool_id, extension.into(), asset.contract_address.into(), v_token_v1.into(),
             ]
                 .span(),
-            true
+            true,
         ))
             .unwrap();
 
@@ -90,9 +76,9 @@ mod TestVTokenV2 {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == scale,
-            'room neq 1'
+            'room neq 1',
         );
 
         assert(
@@ -110,10 +96,10 @@ mod TestVTokenV2 {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 2
                 * scale,
-            'room neq 2'
+            'room neq 2',
         );
 
         assert(
@@ -131,9 +117,9 @@ mod TestVTokenV2 {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 0,
-            'room neq 3'
+            'room neq 3',
         );
 
         assert(
@@ -151,9 +137,9 @@ mod TestVTokenV2 {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 0,
-            'room neq 4'
+            'room neq 4',
         );
 
         assert(
@@ -171,17 +157,17 @@ mod TestVTokenV2 {
                     last_full_utilization_rate: SCALE,
                     fee_rate: 0,
                 },
-                scale
+                scale,
             ) == 5
                 * scale,
-            'room neq 5'
+            'room neq 5',
         );
     }
 
     #[test]
     fn test_v_token_mint_v_token() {
         let v_token = IVTokenV2Dispatcher { contract_address: deploy_v_token() };
-        prank(CheatTarget::One(v_token.contract_address), v_token.extension(), CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, v_token.extension(), CheatSpan::TargetCalls(1));
         v_token.mint_v_token(get_contract_address(), 100.into());
         assert(balance_of(v_token.contract_address, get_contract_address()) == 100, 'v_token not minted');
     }
@@ -197,24 +183,24 @@ mod TestVTokenV2 {
     fn test_v_token_burn_v_token() {
         let v_token = IVTokenV2Dispatcher { contract_address: deploy_v_token() };
 
-        prank(CheatTarget::One(v_token.contract_address), v_token.extension(), CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, v_token.extension(), CheatSpan::TargetCalls(1));
         IVTokenV2Dispatcher { contract_address: v_token.contract_address }
             .mint_v_token(get_contract_address(), 100.into());
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 100,
-            'v_token not minted'
+            'v_token not minted',
         );
 
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.extension(), 50.into());
 
-        prank(CheatTarget::One(v_token.contract_address), v_token.extension(), CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, v_token.extension(), CheatSpan::TargetCalls(1));
         IVTokenV2Dispatcher { contract_address: v_token.contract_address }
             .burn_v_token(get_contract_address(), 50.into());
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 50,
-            'amount not burned'
+            'amount not burned',
         );
     }
 
@@ -223,13 +209,13 @@ mod TestVTokenV2 {
     fn test_v_token_burn_v_token_not_extension() {
         let v_token = IVTokenV2Dispatcher { contract_address: deploy_v_token() };
 
-        prank(CheatTarget::One(v_token.contract_address), v_token.extension(), CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, v_token.extension(), CheatSpan::TargetCalls(1));
         IVTokenV2Dispatcher { contract_address: v_token.contract_address }
             .mint_v_token(get_contract_address(), 100.into());
 
         assert(
             IERC20Dispatcher { contract_address: v_token.contract_address }.balance_of(get_contract_address()) == 100,
-            'v_token not minted'
+            'v_token not minted',
         );
 
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.contract_address, 50.into());
@@ -243,7 +229,7 @@ mod TestVTokenV2 {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.asset() == collateral_asset.contract_address, 'asset not set');
     }
@@ -254,21 +240,21 @@ mod TestVTokenV2 {
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let LendingTerms { collateral_to_deposit, .. } = terms;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         assert(v_token.total_assets() == 0, 'total_assets');
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, collateral_to_deposit);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         let shares = v_token.deposit(collateral_to_deposit, users.lender);
 
         assert(
             v_token
                 .total_assets() == singleton
                 .calculate_collateral(pool_id, collateral_asset.contract_address, shares.into()),
-            'total_assets neq'
+            'total_assets neq',
         );
     }
 
@@ -277,13 +263,13 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.convert_to_shares(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -292,13 +278,13 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let shares = 100000;
         let assets = v_token.convert_to_assets(shares);
         assert(
             assets == singleton.calculate_collateral(pool_id, collateral_asset.contract_address, -shares.into()),
-            'assets neq'
+            'assets neq',
         );
     }
 
@@ -307,9 +293,9 @@ mod TestVTokenV2 {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_deposit(Zeroable::zero()) > 0, 'max_deposit not set');
+        assert(v_token.max_deposit(Zero::zero()) > 0, 'max_deposit not set');
     }
 
     #[test]
@@ -317,13 +303,13 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.preview_deposit(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -332,19 +318,19 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         let shares = v_token.deposit(assets, users.lender);
 
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into()),
-            'shares neq'
+            'shares neq',
         );
 
         assert(balance_of(v_token.contract_address, users.lender) == shares, 'v_token not minted');
@@ -355,9 +341,9 @@ mod TestVTokenV2 {
         let (_, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_mint(Zeroable::zero()) > 0, 'max_mint not set');
+        assert(v_token.max_mint(Zero::zero()) > 0, 'max_mint not set');
     }
 
     #[test]
@@ -365,7 +351,7 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
@@ -377,15 +363,15 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         assert(assets == v_token.mint(shares, users.lender), 'assets neq');
 
         assert(balance_of(v_token.contract_address, users.lender) == shares, 'v_token not minted');
@@ -396,16 +382,16 @@ mod TestVTokenV2 {
         let (_, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_withdraw(users.lender) == Zeroable::zero(), 'max_withdraw not zero');
+        assert(v_token.max_withdraw(users.lender) == Zero::zero(), 'max_withdraw not zero');
 
         let assets = 100000;
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.deposit(assets, users.lender);
 
         assert(v_token.max_withdraw(users.lender) == assets, 'max_withdraw not set');
@@ -416,13 +402,13 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = v_token.preview_withdraw(assets);
         assert(
             shares == singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, -assets.into()),
-            'shares neq'
+            'shares neq',
         );
     }
 
@@ -431,20 +417,20 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.deposit(assets, users.lender);
 
         assert(balance_of(v_token.contract_address, users.lender) == shares, 'v_token not minted');
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         let shares_ = v_token.withdraw(assets, users.lender, users.lender);
 
         assert(shares == shares_, 'shares neq');
@@ -458,21 +444,21 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.deposit(assets, users.lender);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.contract_address, shares);
 
-        prank(CheatTarget::One(v_token.contract_address), users.borrower, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.borrower, CheatSpan::TargetCalls(1));
         v_token.withdraw(assets, users.lender, users.lender);
     }
 
@@ -481,16 +467,16 @@ mod TestVTokenV2 {
         let (_, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
-        assert(v_token.max_redeem(users.lender) == Zeroable::zero(), 'max_redeem not zero');
+        assert(v_token.max_redeem(users.lender) == Zero::zero(), 'max_redeem not zero');
 
         let assets = 100000;
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         let shares = v_token.deposit(assets, users.lender);
 
         assert(v_token.max_redeem(users.lender) == shares, 'max_redeem not set');
@@ -501,7 +487,7 @@ mod TestVTokenV2 {
         let (singleton, extension, config, _, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, -assets.into());
@@ -513,18 +499,18 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.mint(shares, users.lender);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         let assets_ = v_token.redeem(shares, users.lender, users.lender);
 
         assert(assets == assets_, 'assets neq');
@@ -538,23 +524,23 @@ mod TestVTokenV2 {
         let (singleton, extension, config, users, _) = setup();
         let TestConfig { pool_id, collateral_asset, .. } = config;
         let v_token = IERC4626Dispatcher {
-            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address)
+            contract_address: extension.v_token_for_collateral_asset(pool_id, collateral_asset.contract_address),
         };
         let assets = 100000;
         let shares = singleton.calculate_collateral_shares(pool_id, collateral_asset.contract_address, assets.into());
 
-        prank(CheatTarget::One(collateral_asset.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(collateral_asset.contract_address, users.lender, CheatSpan::TargetCalls(1));
         collateral_asset.approve(v_token.contract_address, assets);
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         v_token.mint(shares, users.lender);
 
         assert(balance_of(v_token.contract_address, users.lender) == shares, 'v_token not minted');
 
-        prank(CheatTarget::One(v_token.contract_address), users.lender, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.lender, CheatSpan::TargetCalls(1));
         IERC20Dispatcher { contract_address: v_token.contract_address }.approve(v_token.contract_address, shares);
 
-        prank(CheatTarget::One(v_token.contract_address), users.borrower, CheatSpan::TargetCalls(1));
+        cheat_caller_address(v_token.contract_address, users.borrower, CheatSpan::TargetCalls(1));
         v_token.redeem(shares, users.lender, users.lender);
     }
 }

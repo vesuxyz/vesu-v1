@@ -1,3 +1,4 @@
+use core::traits::DivRem;
 use vesu::units::SCALE;
 
 /// Adapted from https://github.com/influenceth/cubit/blob/main/src/f128/math/core.cairo#L240
@@ -7,7 +8,7 @@ use vesu::units::SCALE;
 /// * `is_negative` - true if `n` is negative
 /// # Returns
 /// * `result` - [SCALE]
-fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
+pub fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
     if is_negative {
         x = SCALE * SCALE / x;
     }
@@ -17,10 +18,10 @@ fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
     }
 
     let mut y = SCALE;
-    let two = integer::u256_as_non_zero(2);
+    let two: NonZero<u256> = 2_u256.try_into().unwrap();
 
     while n > 1 {
-        let (div, rem, _) = integer::u256_safe_divmod(n, two);
+        let (div, rem) = DivRem::div_rem(n, two);
 
         if rem == 1 {
             y = x * y / SCALE;
@@ -28,7 +29,7 @@ fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
 
         x = x * x / SCALE;
         n = div;
-    };
+    }
 
     x * y / SCALE
 }
@@ -40,7 +41,7 @@ fn pow_scale(mut x: u256, mut n: u256, is_negative: bool) -> u256 {
 /// * `n` - exponent
 /// # Returns
 /// * `u256` - result of x raised to the power of n
-fn pow(x: u256, n: usize) -> u256 {
+pub fn pow(x: u256, n: usize) -> u256 {
     if x == 0 {
         return 0;
     }
@@ -60,7 +61,7 @@ fn pow(x: u256, n: usize) -> u256 {
 /// * `n` - exponent.
 /// # Returns
 /// * `u256` - result
-fn pow_10_or_0(n: usize) -> u256 {
+pub fn pow_10_or_0(n: usize) -> u256 {
     if n == 0 {
         0
     } else {
@@ -73,7 +74,7 @@ fn pow_10_or_0(n: usize) -> u256 {
 /// * `n` - exponent
 /// # Returns
 /// * `u256` - result
-fn pow_10(n: usize) -> u256 {
+pub fn pow_10(n: usize) -> u256 {
     if n == 18 {
         1_000_000_000_000_000_000
     } else if n == 6 {
@@ -88,7 +89,7 @@ fn pow_10(n: usize) -> u256 {
 /// * `x` - number to compute the log of
 /// # Returns
 /// * `u8` - log base 10 of x
-fn log_10(mut x: u256) -> u8 {
+pub fn log_10(mut x: u256) -> u8 {
     assert!(x != 0, "log-10-zero");
     if x == SCALE {
         return 18;
@@ -100,15 +101,15 @@ fn log_10(mut x: u256) -> u8 {
     while x >= SCALE {
         x = x / SCALE;
         n += 18;
-    };
+    }
     while x >= 10_000 {
         x = x / 10_000;
         n = n + 4;
-    };
+    }
     while x >= 10 {
         x = x / 10;
         n = n + 1;
-    };
+    }
 
     n
 }
@@ -118,7 +119,7 @@ fn log_10(mut x: u256) -> u8 {
 /// * `x` - number to compute the log of
 /// # Returns
 /// * `u8` - log base 10 of x
-fn log_10_or_0(mut x: u256) -> u8 {
+pub fn log_10_or_0(mut x: u256) -> u8 {
     if x == 0 {
         0
     } else {

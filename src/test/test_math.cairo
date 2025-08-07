@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod TestMath {
-    use vesu::{math::{pow, pow_10, pow_10_or_0, pow_scale, log_10}, units::{SCALE}};
+    use vesu::math::{log_10, pow, pow_10, pow_10_or_0, pow_scale};
+    use vesu::units::SCALE;
 
     #[test]
     fn test_pow_scale() {

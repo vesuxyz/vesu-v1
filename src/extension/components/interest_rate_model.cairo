@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: ISC
-// This implementation is inspired by https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol”
+// This implementation is inspired by
+// https://github.com/FraxFinance/fraxlend/blob/main/src/contracts/VariableInterestRate.sol
 
-use vesu::{units::SCALE, packing::{SHIFT_32, SHIFT_64, split_32, split_64}};
+use starknet::storage_access::StorePacking;
+use vesu::packing::{SHIFT_32, SHIFT_64, split_32, split_64};
+use vesu::units::SCALE;
 
 const UTILIZATION_SCALE: u256 = 100_000; // 1e5
 const UTILIZATION_SCALE_TO_SCALE: u256 = 10_000_000_000_000; // 1e13
 
-#[derive(PartialEq, Copy, Drop, Serde, starknet::StorePacking)]
-struct InterestRateConfig {
-    min_target_utilization: u256, // [utilization-scale]
-    max_target_utilization: u256, // [utilization-scale]
-    target_utilization: u256, // [utilization-scale]
-    min_full_utilization_rate: u256, // [SCALE]
-    max_full_utilization_rate: u256, // [SCALE]
-    zero_utilization_rate: u256, // [SCALE]
-    rate_half_life: u256, // [seconds]
-    target_rate_percent: u256, // [SCALE]
+#[derive(PartialEq, Copy, Drop, Serde)]
+pub struct InterestRateConfig {
+    pub min_target_utilization: u256, // [utilization-scale]
+    pub max_target_utilization: u256, // [utilization-scale]
+    pub target_utilization: u256, // [utilization-scale]
+    pub min_full_utilization_rate: u256, // [SCALE]
+    pub max_full_utilization_rate: u256, // [SCALE]
+    pub zero_utilization_rate: u256, // [SCALE]
+    pub rate_half_life: u256, // [seconds]
+    pub target_rate_percent: u256 // [SCALE]
 }
 
-impl InterestRateConfigPacking of starknet::StorePacking<InterestRateConfig, (felt252, felt252)> {
+pub impl InterestRateConfigPacking of StorePacking<InterestRateConfig, (felt252, felt252)> {
     fn pack(value: InterestRateConfig) -> (felt252, felt252) {
         let min_target_utilization: u32 = value.min_target_utilization.try_into().expect('pack-min-target-utilization');
         let max_target_utilization: u32 = value.max_target_utilization.try_into().expect('pack-max-target-utilization');
@@ -78,21 +81,23 @@ impl InterestRateConfigPacking of starknet::StorePacking<InterestRateConfig, (fe
 }
 
 fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
-    let InterestRateConfig { min_target_utilization,
-    max_target_utilization,
-    ..,
-    min_full_utilization_rate,
-    max_full_utilization_rate,
-    zero_utilization_rate,
-    rate_half_life,
-    target_rate_percent } =
-        interest_rate_config;
+    let InterestRateConfig {
+        min_target_utilization,
+        max_target_utilization,
+        ..,
+        min_full_utilization_rate,
+        max_full_utilization_rate,
+        zero_utilization_rate,
+        rate_half_life,
+        target_rate_percent,
+    } = interest_rate_config;
     assert!(min_target_utilization <= max_target_utilization, "min-target-utilization-gt-max-target-utilization");
     assert!(max_target_utilization <= UTILIZATION_SCALE, "max-target-utilization-gt-100%");
     assert!(max_target_utilization != 0, "max-target-utilization-eq-0");
     assert!(zero_utilization_rate <= min_full_utilization_rate, "zero-utilization-rate-gt-min-full-utilization-rate");
     assert!(
-        min_full_utilization_rate <= max_full_utilization_rate, "min-full-utilization-rate-gt-max-full-utilization-rate"
+        min_full_utilization_rate <= max_full_utilization_rate,
+        "min-full-utilization-rate-gt-max-full-utilization-rate",
     );
     assert!(rate_half_life != 0, "rate-half-life-eq-0");
     assert!(target_rate_percent <= SCALE, "target-rate-percent-gt-100%");
@@ -100,27 +105,25 @@ fn assert_interest_rate_config(interest_rate_config: InterestRateConfig) {
 }
 
 #[starknet::component]
-mod interest_rate_model_component {
+pub mod interest_rate_model_component {
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_block_timestamp};
-    use vesu::{
-        units::SCALE, common::calculate_rate_accumulator,
-        extension::{
-            default_extension_po::{IDefaultExtensionCallback, ITokenizationCallback},
-            components::interest_rate_model::{
-                InterestRateConfig, assert_interest_rate_config, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE
-            }
-        },
-        singleton::{ISingletonDispatcher, ISingletonDispatcherTrait}
+    use vesu::common::calculate_rate_accumulator;
+    use vesu::extension::components::interest_rate_model::{
+        InterestRateConfig, UTILIZATION_SCALE, UTILIZATION_SCALE_TO_SCALE, assert_interest_rate_config,
     };
+    use vesu::extension::default_extension_po_v2::IDefaultExtensionCallback;
+    use vesu::singleton_v2::{ISingletonV2Dispatcher, ISingletonV2DispatcherTrait};
+    use vesu::units::SCALE;
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         // (pool_id, asset) -> interest rate configuration
-        interest_rate_configs: LegacyMap::<(felt252, ContractAddress), InterestRateConfig>,
+        pub interest_rate_configs: Map<(felt252, ContractAddress), InterestRateConfig>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SetInterestRateConfig {
+    pub struct SetInterestRateConfig {
         pool_id: felt252,
         asset: ContractAddress,
         interest_rate_config: InterestRateConfig,
@@ -128,12 +131,12 @@ mod interest_rate_model_component {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-        SetInterestRateConfig: SetInterestRateConfig
+    pub enum Event {
+        SetInterestRateConfig: SetInterestRateConfig,
     }
 
     #[generate_trait]
-    impl InterestRateModelTrait<
+    pub impl InterestRateModelTrait<
         TContractState, +HasComponent<TContractState>, +IDefaultExtensionCallback<TContractState>,
     > of Trait<TContractState> {
         /// Sets the interest rate configuration for a specific pool and asset
@@ -145,7 +148,7 @@ mod interest_rate_model_component {
             ref self: ComponentState<TContractState>,
             pool_id: felt252,
             asset: ContractAddress,
-            interest_rate_config: InterestRateConfig
+            interest_rate_config: InterestRateConfig,
         ) {
             let current_interest_rate_config: InterestRateConfig = self.interest_rate_configs.read((pool_id, asset));
             assert!(current_interest_rate_config.max_target_utilization == 0, "interest-rate-config-already-set");
@@ -172,7 +175,8 @@ mod interest_rate_model_component {
             let mut interest_rate_config: InterestRateConfig = self.interest_rate_configs.read((pool_id, asset));
             assert!(interest_rate_config.max_target_utilization != 0, "interest-rate-config-not-set");
 
-            ISingletonDispatcher { contract_address: self.get_contract().singleton() }.claim_fee_shares(pool_id, asset);
+            ISingletonV2Dispatcher { contract_address: self.get_contract().singleton() }
+                .claim_fee_shares(pool_id, asset);
 
             if parameter == 'min_target_utilization' {
                 interest_rate_config.min_target_utilization = value;
@@ -261,16 +265,17 @@ mod interest_rate_model_component {
     /// # Returns
     /// * `interest_rate` - new interest rate [SCALE]
     /// * `full_utilization_rate` - new full utilization interest rate [SCALE]
-    fn calculate_interest_rate(
+    pub fn calculate_interest_rate(
         interest_rate_config: InterestRateConfig, utilization: u256, time_delta: u64, last_full_utilization_rate: u256,
     ) -> (u256, u256) {
         let utilization = utilization / UTILIZATION_SCALE_TO_SCALE;
-        let InterestRateConfig { target_utilization, zero_utilization_rate, target_rate_percent, .. } =
-            interest_rate_config;
+        let InterestRateConfig {
+            target_utilization, zero_utilization_rate, target_rate_percent, ..,
+        } = interest_rate_config;
 
         // calculate interest rate based on utilization
         let next_full_utilization_rate = full_utilization_rate(
-            interest_rate_config, time_delta.into(), utilization, last_full_utilization_rate
+            interest_rate_config, time_delta.into(), utilization, last_full_utilization_rate,
         );
 
         let target_rate = (((next_full_utilization_rate - zero_utilization_rate) * target_rate_percent) / SCALE)
@@ -283,9 +288,9 @@ mod interest_rate_model_component {
             zero_utilization_rate + (utilization * (target_rate - zero_utilization_rate)) / target_utilization
         } else {
             // For readability, the following formula is equivalent to:
-            // let slope = (((next_full_utilization_rate - target_rate) * UTILIZATION_SCALE) / (UTILIZATION_SCALE - target_utilization));
+            // let slope = (((next_full_utilization_rate - target_rate) * UTILIZATION_SCALE) / (UTILIZATION_SCALE -
+            // target_utilization));
             // target_rate + ((utilization - target_utilization) * slope) / UTILIZATION_SCALE
-
             target_rate
                 + ((utilization - target_utilization) * (next_full_utilization_rate - target_rate))
                     / (SCALE - target_utilization)
@@ -299,20 +304,21 @@ mod interest_rate_model_component {
     /// # Arguments
     /// * `interest_rate_config` - interest rate configuration
     /// * `time_delta` - elapsed time since last update given in seconds [seconds]
-    /// * `utilization` - utilization (% 5 decimals of precision) [utilization-scale] 
+    /// * `utilization` - utilization (% 5 decimals of precision) [utilization-scale]
     /// * `full_utilization_rate` - interest value when utilization is 100%, given with 18 decimals of precision [SCALE]
     /// # Returns
     /// * `full_utilization_rate` - new interest rate at full utilization [SCALE]
     fn full_utilization_rate(
         interest_rate_config: InterestRateConfig, time_delta: u256, utilization: u256, full_utilization_rate: u256,
     ) -> u256 {
-        let InterestRateConfig { min_target_utilization,
-        max_target_utilization,
-        rate_half_life,
-        min_full_utilization_rate,
-        max_full_utilization_rate,
-        .. } =
-            interest_rate_config;
+        let InterestRateConfig {
+            min_target_utilization,
+            max_target_utilization,
+            rate_half_life,
+            min_full_utilization_rate,
+            max_full_utilization_rate,
+            ..,
+        } = interest_rate_config;
         let half_life_scaled = rate_half_life * SCALE;
 
         let next_full_utilization_rate = if utilization < min_target_utilization {

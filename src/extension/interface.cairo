@@ -1,9 +1,9 @@
 use alexandria_math::i257::i257;
 use starknet::ContractAddress;
-use vesu::data_model::{UnsignedAmount, Amount, Context, AssetPrice};
+use vesu::data_model::{Amount, AssetPrice, Context, UnsignedAmount};
 
 #[starknet::interface]
-trait IExtension<TContractState> {
+pub trait IExtension<TContractState> {
     fn singleton(self: @TContractState) -> ContractAddress;
     fn price(self: @TContractState, pool_id: felt252, asset: ContractAddress) -> AssetPrice;
     fn interest_rate(
@@ -29,7 +29,7 @@ trait IExtension<TContractState> {
         collateral: Amount,
         debt: Amount,
         data: Span<felt252>,
-        caller: ContractAddress
+        caller: ContractAddress,
     ) -> (Amount, Amount);
     fn after_modify_position(
         ref self: TContractState,
@@ -39,7 +39,7 @@ trait IExtension<TContractState> {
         debt_delta: i257,
         nominal_debt_delta: i257,
         data: Span<felt252>,
-        caller: ContractAddress
+        caller: ContractAddress,
     ) -> bool;
     fn before_transfer_position(
         ref self: TContractState,
@@ -48,7 +48,7 @@ trait IExtension<TContractState> {
         collateral: UnsignedAmount,
         debt: UnsignedAmount,
         data: Span<felt252>,
-        caller: ContractAddress
+        caller: ContractAddress,
     ) -> (UnsignedAmount, UnsignedAmount);
     fn after_transfer_position(
         ref self: TContractState,
@@ -59,10 +59,10 @@ trait IExtension<TContractState> {
         debt_delta: u256,
         nominal_debt_delta: u256,
         data: Span<felt252>,
-        caller: ContractAddress
+        caller: ContractAddress,
     ) -> bool;
     fn before_liquidate_position(
-        ref self: TContractState, context: Context, data: Span<felt252>, caller: ContractAddress
+        ref self: TContractState, context: Context, data: Span<felt252>, caller: ContractAddress,
     ) -> (u256, u256, u256);
     fn after_liquidate_position(
         ref self: TContractState,
@@ -73,6 +73,6 @@ trait IExtension<TContractState> {
         nominal_debt_delta: i257,
         bad_debt: u256,
         data: Span<felt252>,
-        caller: ContractAddress
+        caller: ContractAddress,
     ) -> bool;
 }

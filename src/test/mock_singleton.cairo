@@ -1,23 +1,24 @@
-use starknet::{ContractAddress};
+use starknet::ContractAddress;
 use vesu::data_model::{AssetConfig, Position};
 
 #[starknet::interface]
-trait IMockSingleton<TContractState> {
+pub trait IMockSingleton<TContractState> {
     fn asset_config(ref self: TContractState, pool_id: felt252, asset: ContractAddress) -> (AssetConfig, u256);
     fn position(
         ref self: TContractState,
         pool_id: felt252,
         collateral_asset: ContractAddress,
         debt_asset: ContractAddress,
-        user: ContractAddress
+        user: ContractAddress,
     ) -> (Position, u256, u256);
 }
 
 #[starknet::contract]
 mod MockSingleton {
-    use alexandria_math::i257::i257;
     use starknet::ContractAddress;
-    use vesu::{data_model::{AssetConfig, Position}, units::SCALE, test::mock_singleton::IMockSingleton};
+    use vesu::data_model::{AssetConfig, Position};
+    use vesu::test::mock_singleton::IMockSingleton;
+    use vesu::units::SCALE;
 
     #[storage]
     struct Storage {}
@@ -39,7 +40,7 @@ mod MockSingleton {
                     last_full_utilization_rate: SCALE,
                     fee_rate: SCALE,
                 },
-                0
+                0,
             )
         }
 
@@ -48,7 +49,7 @@ mod MockSingleton {
             pool_id: felt252,
             collateral_asset: ContractAddress,
             debt_asset: ContractAddress,
-            user: ContractAddress
+            user: ContractAddress,
         ) -> (Position, u256, u256) {
             (Position { collateral_shares: 0, nominal_debt: 0 }, 0, 0)
         }

@@ -1,8 +1,10 @@
-use vesu::{
-    data_model::{Position, AssetConfig, assert_asset_config_exists}, math::{pow_10_or_0, log_10_or_0}, units::PERCENT
-};
+use core::traits::DivRem;
+use starknet::storage_access::StorePacking;
+use vesu::data_model::{AssetConfig, Position, assert_asset_config_exists};
+use vesu::math::{log_10_or_0, pow_10_or_0};
+use vesu::units::PERCENT;
 
-impl PositionPacking of starknet::StorePacking<Position, felt252> {
+pub impl PositionPacking of StorePacking<Position, felt252> {
     fn pack(value: Position) -> felt252 {
         let collateral_shares: u128 = value.collateral_shares.try_into().expect('pack-collateral-shares');
         let nominal_debt: u128 = value.nominal_debt.try_into().expect('pack-nominal-debt');
@@ -16,7 +18,7 @@ impl PositionPacking of starknet::StorePacking<Position, felt252> {
     }
 }
 
-impl AssetConfigPacking of starknet::StorePacking<AssetConfig, (felt252, felt252, felt252)> {
+pub impl AssetConfigPacking of StorePacking<AssetConfig, (felt252, felt252, felt252)> {
     fn pack(value: AssetConfig) -> (felt252, felt252, felt252) {
         // slot 1
         let total_collateral_shares: u128 = value
@@ -86,12 +88,12 @@ impl AssetConfigPacking of starknet::StorePacking<AssetConfig, (felt252, felt252
             last_updated: last_updated.into(),
             last_rate_accumulator: last_rate_accumulator.into(),
             last_full_utilization_rate: last_full_utilization_rate.into(),
-            fee_rate: fee_rate.into() * PERCENT
+            fee_rate: fee_rate.into() * PERCENT,
         }
     }
 }
 
-fn assert_storable_asset_config(asset_config: AssetConfig) {
+pub fn assert_storable_asset_config(asset_config: AssetConfig) {
     assert_asset_config_exists(asset_config);
     let packed = AssetConfigPacking::pack(asset_config);
     let unpacked = AssetConfigPacking::unpack(packed);
@@ -101,45 +103,45 @@ fn assert_storable_asset_config(asset_config: AssetConfig) {
     assert!(asset_config.fee_rate == unpacked.fee_rate, "fee-rate-precision-loss");
 }
 
-const SHIFT_8: felt252 = 0x100;
-const SHIFT_16: felt252 = 0x10000;
-const SHIFT_32: felt252 = 0x100000000;
-const SHIFT_64: felt252 = 0x10000000000000000;
-const SHIFT_128: felt252 = 0x100000000000000000000000000000000;
+pub const SHIFT_8: felt252 = 0x100;
+pub const SHIFT_16: felt252 = 0x10000;
+pub const SHIFT_32: felt252 = 0x100000000;
+pub const SHIFT_64: felt252 = 0x10000000000000000;
+pub const SHIFT_128: felt252 = 0x100000000000000000000000000000000;
 
-fn split_8(value: u256) -> (u256, u8) {
-    let shift = integer::u256_as_non_zero(SHIFT_8.into());
-    let (rest, first) = integer::u256_safe_div_rem(value.into(), shift);
+pub fn split_8(value: u256) -> (u256, u8) {
+    let shift: u256 = SHIFT_8.into();
+    let (rest, first) = DivRem::div_rem(value, shift.try_into().unwrap());
     (rest, first.try_into().unwrap())
 }
 
-fn split_16(value: u256) -> (u256, u16) {
-    let shift = integer::u256_as_non_zero(SHIFT_16.into());
-    let (rest, first) = integer::u256_safe_div_rem(value.into(), shift);
+pub fn split_16(value: u256) -> (u256, u16) {
+    let shift: u256 = SHIFT_16.into();
+    let (rest, first) = DivRem::div_rem(value, shift.try_into().unwrap());
     (rest, first.try_into().unwrap())
 }
 
-fn split_32(value: u256) -> (u256, u32) {
-    let shift = integer::u256_as_non_zero(SHIFT_32.into());
-    let (rest, first) = integer::u256_safe_div_rem(value.into(), shift);
+pub fn split_32(value: u256) -> (u256, u32) {
+    let shift: u256 = SHIFT_32.into();
+    let (rest, first) = DivRem::div_rem(value, shift.try_into().unwrap());
     (rest, first.try_into().unwrap())
 }
 
-fn split_64(value: u256) -> (u256, u64) {
-    let shift = integer::u256_as_non_zero(SHIFT_64.into());
-    let (rest, first) = integer::u256_safe_div_rem(value.into(), shift);
+pub fn split_64(value: u256) -> (u256, u64) {
+    let shift: u256 = SHIFT_64.into();
+    let (rest, first) = DivRem::div_rem(value, shift.try_into().unwrap());
     (rest, first.try_into().unwrap())
 }
 
-fn split_128(value: u256) -> (u128, u128) {
-    let shift = integer::u256_as_non_zero(SHIFT_128.into());
-    let (rest, first) = integer::u256_safe_div_rem(value.into(), shift);
+pub fn split_128(value: u256) -> (u128, u128) {
+    let shift: u256 = SHIFT_128.into();
+    let (rest, first) = DivRem::div_rem(value, shift.try_into().unwrap());
     (rest.try_into().unwrap(), first.try_into().unwrap())
 }
 
-const U123_BOUND: u128 = 0x8000000000000000000000000000000;
+pub const U123_BOUND: u128 = 0x8000000000000000000000000000000;
 
-fn into_u123(value: u128, err: felt252) -> felt252 {
+pub fn into_u123(value: u128, err: felt252) -> felt252 {
     assert(value < U123_BOUND, err);
     value.into()
 }

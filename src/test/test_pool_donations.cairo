@@ -1,15 +1,18 @@
 #[cfg(test)]
 mod TestPoolDonation {
+    use alexandria_math::i257::I257Trait;
+    use core::num::traits::Zero;
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher as IERC20Dispatcher, ERC20ABIDispatcherTrait};
     use snforge_std::{
-        start_prank, stop_prank, CheatTarget, ContractClassTrait, ContractClass, get_class_hash, start_warp
+        ContractClass, ContractClassTrait, get_class_hash, start_cheat_block_timestamp_global,
+        start_cheat_caller_address, stop_cheat_caller_address,
     };
     use starknet::get_block_timestamp;
-    use vesu::{
-        units::{SCALE, PERCENT, DAY_IN_SECONDS}, math::pow_10, test::setup::{setup, TestConfig, LendingTerms},
-        singleton::{ISingletonDispatcherTrait, ModifyPositionParams},
-        data_model::{AssetParams, LTVParams, Amount, AmountType, AmountDenomination},
-        vendor::erc20::{ERC20ABIDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait}
-    };
+    use vesu::data_model::{Amount, AmountDenomination, AmountType, ModifyPositionParams};
+    use vesu::math::pow_10;
+    use vesu::singleton_v2::ISingletonV2DispatcherTrait;
+    use vesu::test::setup_v2::{LendingTerms, TestConfig, setup};
+    use vesu::units::{DAY_IN_SECONDS, PERCENT};
 
     #[test]
     fn test_donate_to_reserve_pool() {
@@ -21,9 +24,9 @@ mod TestPoolDonation {
 
         assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
 
-        start_prank(CheatTarget::One(singleton.contract_address), extension.contract_address);
+        start_cheat_caller_address(singleton.contract_address, extension.contract_address);
         singleton.set_asset_parameter(pool_id, debt_asset.contract_address, 'fee_rate', 10 * PERCENT);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let initial_singleton_debt_asset_balance = debt_asset.balance_of(singleton.contract_address);
 
@@ -41,12 +44,12 @@ mod TestPoolDonation {
                 value: liquidity_to_deposit.into(),
             },
             debt: Default::default(),
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // check that liquidity has been deposited
         let balance = debt_asset.balance_of(users.lender);
@@ -83,32 +86,32 @@ mod TestPoolDonation {
                 denomination: AmountDenomination::Native,
                 value: nominal_debt_to_draw.into(),
             },
-            data: ArrayTrait::new().span()
+            data: ArrayTrait::new().span(),
         };
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.borrower);
+        start_cheat_caller_address(singleton.contract_address, users.borrower);
         let response = singleton.modify_position(params);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         // interest accrued should be reflected since time has passed
-        start_warp(CheatTarget::All, get_block_timestamp() + DAY_IN_SECONDS);
+        start_cheat_block_timestamp_global(get_block_timestamp() + DAY_IN_SECONDS);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
+            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares == 0, "No fee shares should not have accrued");
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.donate_to_reserve(pool_id, debt_asset.contract_address, amount_to_donate_to_reserve);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         let (position, _, _) = singleton
-            .position(pool_id, debt_asset.contract_address, Zeroable::zero(), extension.contract_address);
+            .position(pool_id, debt_asset.contract_address, Zero::zero(), extension.contract_address);
         assert!(position.collateral_shares != 0, "Fee shares should have been accrued");
 
         let balance = debt_asset.balance_of(users.lender);
         assert!(
             balance == initial_lender_debt_asset_balance - liquidity_to_deposit - amount_to_donate_to_reserve,
-            "Not transferred from Lender"
+            "Not transferred from Lender",
         );
 
         let (new_position, _, _) = singleton
@@ -119,8 +122,8 @@ mod TestPoolDonation {
         let (asset_config, _) = singleton.asset_config(pool_id, debt_asset.contract_address);
         let new_pool_reserve = asset_config.reserve;
         assert!(
-            new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs,
-            "Reserves not updated"
+            new_pool_reserve == old_pool_reserve + amount_to_donate_to_reserve - response.debt_delta.abs(),
+            "Reserves not updated",
         );
     }
 
@@ -135,9 +138,9 @@ mod TestPoolDonation {
 
         let amount_to_donate_to_reserve = 25 * debt_scale;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.donate_to_reserve(100, debt_asset.contract_address, amount_to_donate_to_reserve);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 
     #[test]
@@ -152,21 +155,22 @@ mod TestPoolDonation {
         let fake_asset_scale = pow_10(decimals);
         let supply = 5 * fake_asset_scale;
         let calldata = array![
-            'Fake', 'FKE', decimals.into(), supply.low.into(), supply.high.into(), users.lender.into()
+            'Fake', 'FKE', decimals.into(), supply.low.into(), supply.high.into(), users.lender.into(),
         ];
-        let fake_asset = IERC20Dispatcher { contract_address: mock_asset_class.deploy(@calldata).unwrap() };
+        let (contract_address, _) = mock_asset_class.deploy(@calldata).unwrap();
+        let fake_asset = IERC20Dispatcher { contract_address };
 
         assert!(fake_asset.balance_of(users.lender) == supply, "Fake asset not minted");
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         fake_asset.approve(singleton.contract_address, supply);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
 
         assert!(singleton.extension(pool_id).is_non_zero(), "Pool not created");
 
         let amount_to_donate_to_reserve = 2 * fake_asset_scale;
 
-        start_prank(CheatTarget::One(singleton.contract_address), users.lender);
+        start_cheat_caller_address(singleton.contract_address, users.lender);
         singleton.donate_to_reserve(pool_id, fake_asset.contract_address, amount_to_donate_to_reserve);
-        stop_prank(CheatTarget::One(singleton.contract_address));
+        stop_cheat_caller_address(singleton.contract_address);
     }
 }

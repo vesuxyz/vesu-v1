@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod TestPacking {
-    use vesu::{
-        units::{SCALE, PERCENT}, singleton::{ISingletonDispatcherTrait}, data_model::{AssetConfig},
-        packing::{AssetConfigPacking},
-    };
+    use vesu::data_model::AssetConfig;
+    use vesu::packing::AssetConfigPacking;
+    use vesu::units::{PERCENT, SCALE};
 
     #[test]
     fn test_asset_config_packing() {
@@ -18,7 +17,7 @@ mod TestPacking {
             last_updated: 1706553699,
             last_rate_accumulator: SCALE,
             last_full_utilization_rate: 6517893350,
-            fee_rate: 1 * PERCENT
+            fee_rate: PERCENT,
         };
 
         let packed = AssetConfigPacking::pack(config);
@@ -34,7 +33,7 @@ mod TestPacking {
         assert!(config.last_updated == unpacked.last_updated, "last_updated err");
         assert!(config.last_rate_accumulator == unpacked.last_rate_accumulator, "last_rate_accumulator err");
         assert!(
-            config.last_full_utilization_rate == unpacked.last_full_utilization_rate, "last_full_utilization_rate err"
+            config.last_full_utilization_rate == unpacked.last_full_utilization_rate, "last_full_utilization_rate err",
         );
         assert!(config.fee_rate == unpacked.fee_rate, "fee_rate err");
 
